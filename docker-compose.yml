@@ -1,0 +1,32 @@
+version: '3.9'
+services:
+  app:
+    image: ecuador_elsa
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - iso3=ECU
+        - location=Ecuador
+        - language=es
+        - googlesheet="https://docs.google.com/spreadsheets/d/1Zrn8wTKQyYRI1rkfIGG3C9NxM6ee1zsecmGzxZtRUeM/edit#gid=526824706"
+        - sheetname=ELSA_data_stack
+        - blm=0
+        - pa_lock=TRUE
+        - urban_green=FALSE
+        - restore_lock=FALSE
+        - project=FALSE
+    expose:
+        - 3838
+    network_mode: bridge
+    environment:
+      - VIRTUAL_HOST=elsa.unbiodiversitylab.org
+      - VIRTUAL_PORT=3838
+      - VIRTUAL_PATH=/Ecuador_ELSA/
+      - VIRTUAL_DEST=/
+
+networks:
+    default:
+       external: true
+       name: nginx-proxy
+

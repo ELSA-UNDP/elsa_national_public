@@ -1,0 +1,88 @@
+name: Continuos Deployment from GitHub to ELSA UNICC
+
+on:
+ push:
+   branches:
+     - cambodia_main
+     - colombia_main
+     - ecuador_main
+     - tier1_cri
+     - haiti_main
+     - peru_main
+     - southafrica_main
+     - chile_main
+     - dominicanrepublic_main
+     - tier1_col
+     - tier1_zaf
+     - kazakhstan_main
+     - peru_ucayali_main
+     - uganda_main
+     - cambodia_dgis
+     - cambodia_public
+     - liberia_main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set ELSA_APP name variable based on branch
+        run: |
+          cambodia_main="Cambodia_ELSA"
+          colombia_main="Colombia_ELSA"
+          ecuador_main="Ecuador_ELSA"
+          tier1_cri="ELSA_Tier1_CRI"
+          haiti_main="Haiti_ELSA"
+          peru_main="Peru_ELSA"
+          southafrica_main="SouthAfrica_ELSA"
+          chile_main="Chile_ELSA"
+          dominicanrepublic_main="DominicanRepublic_ELSA"
+          tier1_col="ELSA_Tier1_Colombia"
+          tier1_zaf="ELSA_Tier1_SouthAfrica"
+          kazakhstan_main="Kazakhstan_ELSA"
+          peru_ucayali_main="PeruUcayali_ELSA"
+          uganda_main="Uganda_ELSA"
+          cambodia_dgis="CambodiaDGIS_ELSA"
+          cambodia_public="Cambodia_ELSA"
+          liberia_main="Liberia_ELSA"
+          echo "ELSA_APP=${!GITHUB_REF_NAME}" >> $GITHUB_ENV
+
+      - name: Stop Systemd service
+        run: |
+          sudo systemctl stop elsa-app@${ELSA_APP}.service
+
+      - name: Update the repository
+        run: |
+          echo "Updating ELSA APP: ${ELSA_APP}"
+          echo "Branch name: ${GITHUB_REF_NAME}"
+
+          cd /data/ELSA/${ELSA_APP}
+          git pull
+          exit_code=$?
+          commit_message=$(git log -1 --pretty=format:"%h | %an | %ad | %s")
+          if [[ $exit_code -ne 0 ]]; then
+              echo -e "\nPull failed! \n$commit_message"
+              exit 1
+          else
+              echo -e "\nChange pulled! \n$commit_message"
+          fi
+
+      - name: Start Systemd service
+        run: |
+          NOW=$(date '+%Y-%m-%d %H:%M:%S')
+          sudo systemctl start elsa-app@${ELSA_APP}.service
+
+          # check and wait
+          sudo journalctl --since="${NOW}" -f -n all -u elsa-app@${ELSA_APP}.service | grep -q -m 1 "Starting listener\|Failed with result"
+
+          # print log
+          sudo journalctl --since="${NOW}" -n all -u elsa-app@${ELSA_APP}.service
+
+          # check the service status
+          if systemctl is-active elsa-app@${ELSA_APP}.service; then
+              echo "Service sucessfully started."
+          else
+              echo "Failed to start service."
+              exit 1
+          fi
