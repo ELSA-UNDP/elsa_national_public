@@ -189,24 +189,10 @@ server <- function(input, output, session) {
 
       # Solve conservation problem ####
       elsa_result <- solve(prob.all, force = TRUE)
-      #browser()
-      
+      # browser()
+
       # get feature representation
-      # feat_rep <-
-      #   prioritizr::eval_feature_representation_summary(prob.all, elsa_result) %>%
-      #   dplyr::filter(summary != "overall") %>%
-      #   dplyr::rename(zone = summary)
-      # 
-      # tmp <-
-      #   impacts.temp[, c("feature", "Protect", "Restore", "Manage")] %>%
-      #   tidyr::pivot_longer(-feature, names_to = "zone", values_to = "impact")
-      # 
-      # feat_rep <-
-      #   dplyr::left_join(feat_rep, tmp, by = c("feature" = "feature", "zone" = "zone"))
-      # 
-      # feat_rep$relative_held <-
-      #   feat_rep$relative_held * feat_rep$impact
-      
+
       # First get overall info from prioritizr
       overall_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result) %>%
         dplyr::rename(
@@ -216,7 +202,7 @@ server <- function(input, output, session) {
         ) %>%
         filter(zone == "overall") %>%
         dplyr::select(-"zone", -"absolute_held")
-      
+
       # Calculate relative values for each zone and pivot them into new columns
       relative_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result) %>%
         dplyr::rename(zone = summary) %>%
@@ -226,13 +212,14 @@ server <- function(input, output, session) {
         dplyr::mutate(relative_held_zone = absolute_held / total_amount_overall) %>%
         dplyr::select("zone", "feature", "relative_held_zone") %>%
         tidyr::pivot_wider(names_from = zone, values_from = relative_held_zone)
-      
+
       # Combine the overall totals with the relative values
       feat_rep <- overall_rep %>%
         dplyr::left_join(relative_rep, by = "feature")
 
       elsa_result_multi <- feat_rep.lst <- list()
 
+      browser()
       if (input$multipri == TRUE) {
         for (ii in 1:nrow(theme_tbl)) {
           progress$set(
@@ -247,11 +234,32 @@ server <- function(input, output, session) {
               theme_tbl
             )), 1)
           )
-
+          
+          # test1 <- rep(1, 29)
+          # test1[names(feat_stack) %nin% theme_tbl$names[[ii]]] <- 0
+          # 
+          # zns_test <- prioritizr::zones(
+          #   "Protect" = zns[[1]]* test1,
+          #   "Restore" = zns[[2]]* test1,
+          #   "Manage" = zns[[3]]* test1,
+          #   feature_names = names(zns[[1]])
+          # )
+          # 
+          # prob.ta <- prioritizr::problem(pu_temp, zns_test, run_checks = FALSE) %>%
+          #   prioritizr::add_gurobi_solver(gap = 0.05, threads = 8)         
+          # 
+          # target <- get_min_lockin_target(c(PA0, PA0, PA0), input, pu)
+          # 
+          # prob.ta <- prob.ta %>%
+          #   prioritizr::add_max_utility_objective(c(
+          #     count_tar(pu0, target[1]),
+          #     count_tar(pu0, target[2]),
+          #     count_tar(pu0, target[3])
+          #   ))
+          
           wgt.tmp <- weights.temp
-
-          wgt.tmp$weight[names(feat_stack) %nin% theme_tbl$names[[ii]]] <-
-            0
+          
+          wgt.tmp$weight[names(feat_stack) %nin% theme_tbl$names[[ii]]] <- 0
 
           prob.tmp <- prob.ta %>%
             prioritizr::add_feature_weights(as.matrix(matrix(
@@ -266,10 +274,10 @@ server <- function(input, output, session) {
           #   prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]]) %>%
           #   dplyr::filter(summary != "overall") %>%
           #   dplyr::rename(zone = summary)
-          # 
+          #
           # feat_rep.lst[[ii]]$relative_held <-
           #   feat_rep.lst[[ii]]$relative_held * feat_rep$impact
-          
+
           overall_rep <- prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]]) %>%
             dplyr::rename(
               zone = summary,
@@ -278,7 +286,7 @@ server <- function(input, output, session) {
             ) %>%
             filter(zone == "overall") %>%
             dplyr::select(-"zone", -"absolute_held")
-          
+
           # Calculate relative values for each zone and pivot them into new columns
           relative_rep <- prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]]) %>%
             dplyr::rename(zone = summary) %>%
@@ -288,7 +296,7 @@ server <- function(input, output, session) {
             dplyr::mutate(relative_held_zone = absolute_held / total_amount_overall) %>%
             dplyr::select("zone", "feature", "relative_held_zone") %>%
             tidyr::pivot_wider(names_from = zone, values_from = relative_held_zone)
-          
+
           # Combine the overall totals with the relative values
           feat_rep.lst[[ii]] <- overall_rep %>%
             dplyr::left_join(relative_rep, by = "feature") %>%
@@ -308,31 +316,37 @@ server <- function(input, output, session) {
           dplyr::pull(language),
         value = 0.9
       )
-      browser()
 
-      rh_rep <- feat_rep %>%
-        dplyr::group_by(feature) %>%
-        dplyr::summarise(ELSA = round(sum(relative_held_overall, na.rm = T) * 100, 0)) # what is this meant to do?
+
+      # rh_rep <- feat_rep %>%
+      #   dplyr::group_by(feature) %>%
+      #   dplyr::summarise(ELSA = round(sum(relative_held_overall, na.rm = T) * 100, 0)) # what is this meant to do?
 
       if (input$multipri == TRUE) {
-        #rh.lst <- list()
-        
+        # rh.lst <- list()
+
         feature_rep_tabl_comb <- purrr::reduce(seq_along(feat_rep.lst), function(x, i) {
           # Subset first data frame (i == 1) to columns 1:3, the rest to columns 1 and 3
           df <- feat_rep.lst[[i]][, c(1, 2)]
           colnames(df)[2] <- themes[[i]]
-          
+
           # Join the data frames
           dplyr::left_join(x, df, by = setNames(names(x)[1], names(df)[1]))
-        }, .init = feat_rep.lst[[1]][, 1])  %>%
+        }, .init = feat_rep[, c(1, 3)]) %>%
           tibble::add_column(
             Name = feat_df$label,
             Theme = feat_df$theme,
             .before = 1
-          )  %>%
-          dplyr::select(-c(feature))%>%
-          dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) 
-        
+          ) %>%
+          dplyr::rename(ELSA = "relative_held_overall") %>%
+          dplyr::select(-"feature") %>%
+          dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 0))) %>%
+          dplyr::rowwise() %>%
+          dplyr::mutate(elsa_tradeoff = round(ELSA / max(c_across(4:6)) * 100, 0)) %>%
+          dplyr::rename(
+            "{ELSA_text %>% filter(var == 'elsa_tradeoff') %>% pull(language)}" := elsa_tradeoff
+          )
+
 
         # feat_rep_tabl <-
         #   feat_rep[feat_rep$zone == "Protect", c("feature")] %>%
@@ -351,21 +365,21 @@ server <- function(input, output, session) {
         #     dplyr::left_join(rh.lst[[ii]], by = "feature")
         # }
 
-        feat_rep_tabl <- feat_rep_tabl %>%
-          dplyr::rowwise() %>%
-          dplyr::mutate(elsa_tradeoff = round(ELSA / max(c_across(3:5)) * 100, 0)) %>% # ELSA Trade-off relative to other scenarios
-          # tibble::add_column(
-          #   Name = feat_df$label,
-          #   Theme = feat_df$theme,
-          #   .before = 1
-          # ) %>%
-          dplyr::rename(
-            "{ELSA_text %>% filter(var == 'elsa_tradeoff') %>% pull(language)}" := elsa_tradeoff
-          )
+        # feat_rep_tabl <- feat_rep_tabl %>%
+        #   dplyr::rowwise() %>%
+        #   dplyr::mutate(elsa_tradeoff = round(ELSA / max(c_across(3:5)) * 100, 0)) %>% # ELSA Trade-off relative to other scenarios
+        #   # tibble::add_column(
+        #   #   Name = feat_df$label,
+        #   #   Theme = feat_df$theme,
+        #   #   .before = 1
+        #   # ) %>%
+        #   dplyr::rename(
+        #     "{ELSA_text %>% filter(var == 'elsa_tradeoff') %>% pull(language)}" := elsa_tradeoff
+        #  )
       } else { # don't we need this anyway if we want to show ELSA without multipri as well?
         feature_rep_tabl <- feature_rep %>%
           dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) %>%
-          #dplyr::rename_with(~ as_tibble(cats(elsa_raster)[[1]])$label, .cols = -c(1:3)) %>%
+          # dplyr::rename_with(~ as_tibble(cats(elsa_raster)[[1]])$label, .cols = -c(1:3)) %>%
           dplyr::select(3:6) %>%
           tibble::add_column(
             Name = feat_df$label,
@@ -375,9 +389,9 @@ server <- function(input, output, session) {
           dplyr::rename(
             "{ELSA_text %>% filter(var == 'data') %>% pull(language)}" := Name,
             "{ELSA_text %>% filter(var == 'theme') %>% pull(language)}" := Theme,
-           "{ELSA_text %>% filter(var == 'overall') %>% pull(language)}" := relative_held_overall,
+            "{ELSA_text %>% filter(var == 'overall') %>% pull(language)}" := relative_held_overall,
           )
-        
+
         # feat_rep_tabl <-
         #   feat_rep[feat_rep$zone == "Protect", c("feature")] %>%
         #   dplyr::left_join(rh_rep, by = "feature") %>%
