@@ -22,8 +22,8 @@ terra::tmpFiles(remove = TRUE) # Clean existing temp layers
 # Local Data Only
 iso3 <- "ECU" # iso3 code of the country. Needs to match country
 country <- "Ecuador"
-language <- "es" # es = spanish, en = english
-blm <- 0 # boundary length modifier
+language <- "en" # es = spanish, en = english
+blm <- 0 # boundary length modifier (makes solution more clumped but will increase run time)
 palock <- TRUE # lock-in existing protected areas
 restorelock <- FALSE # lock-in existing restoration projects
 weight_cal <- FALSE # perform weight calibration for prioritization (will increase the run time of this script)
@@ -508,7 +508,8 @@ wgts <- tibble::tibble(
 # END Weight calibration
 ################################################################################
 
-# Process feature theme information (specific category for a feature, either Biodiversity, Climate Mitigation or Human Well-being)
+# Process feature theme information ####
+#(specific category for a feature, either Biodiversity, Climate Mitigation or Human Well-being)
 themes <- unique(feat_df$theme)
 theme_names <- list()
 theme_layers <- list()
@@ -526,7 +527,7 @@ theme_tbl <- tibble(
 )
 gc()
 
-# Prepare data that will be used as globals in the app (wrap with terra to later unwrap in global.R)
+# Prepare data that will be used as globals in the app (wrap with terra to later unwrap in global.R) ####
 PA <- terra::wrap(PA)
 if (restorelock) {
   Rest <- terra::wrap(Rest)

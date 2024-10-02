@@ -24,7 +24,8 @@ list.of.packages <- c(
   "tmap",
   "zip",
   "DT",
-  "argparser"
+  "argparser",
+  "highs"
 )
 
 new.packages <-

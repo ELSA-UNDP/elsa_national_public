@@ -105,7 +105,7 @@ server <- function(input, output, session) {
 
       prob.ta <-
         prioritizr::problem(pu_temp, zns, run_checks = FALSE) %>%
-        prioritizr:: add_default_solver(gap = 0.05, threads = 8)#add_gurobi_solver(gap = 0.05, threads = 8)
+        prioritizr:: add_default_solver(gap = 0.05, threads = 4)
 
 
       if (input$protected == "avail") {

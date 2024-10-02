@@ -6,7 +6,6 @@ ELSA_text <- readr::read_rds(here::here(".", "elsa_text.rds"))
 
 language <- language
 country <- country # "Ecuador"
-urb_green <- urb_green
 restorelock <- restorelock
 
 `%nin%` <- Negate(`%in%`)
@@ -71,11 +70,8 @@ names(area_lst) <- ELSA_text %>%
   dplyr::pull(language)
 
 #### Colour Palettes
-if (urb_green) {
-  pal.elsa <- c("#4daf4a", "#984ea3", "#377eb8", "#e41a1c")
-} else {
-  pal.elsa <- c("#4daf4a", "#984ea3", "#377eb8")
-}
+pal.elsa <- c("#4daf4a", "#984ea3", "#377eb8")
+
 pal.hm <- c("#440154", "#3B528B", "#21908C", "#5DC863", "#FDE725")
 pal.in <- c("#0D0887", "#7E03A8", "#CC4678", "#F89441", "#F0F921")
 pal.zone <- "#6afdfa"
@@ -91,39 +87,20 @@ man_zone <-
   terra::rast(here::here("data/elsa_inputs", zones_df$file_name[2]))
 rest_zone <-
   terra::rast(here::here("data/elsa_inputs", zones_df$file_name[3]))
-if (urb_green) {
-  green_zone <-
-    terra::rast(here::here("data/elsa_inputs", zones_df$file_name[4]))
-}
 
-if (urb_green) {
   zn1 <- terra::rast(zn1)
   zn2 <- terra::rast(zn2)
   zn3 <- terra::rast(zn3)
-  zn4 <- terra::rast(zn4)
-} else {
-  zn1 <- terra::rast(zn1)
-  zn2 <- terra::rast(zn2)
-  zn3 <- terra::rast(zn3)
-}
 
 ### Create Zone file
-if (urb_green) {
-  zns <- prioritizr::zones(
-    "Protect" = zn1,
-    "Restore" = zn2,
-    "Manage" = zn3,
-    "Green" = zn4,
-    feature_names = names(zn1)
-  )
-} else {
+
   zns <- prioritizr::zones(
     "Protect" = zn1,
     "Restore" = zn2,
     "Manage" = zn3,
     feature_names = names(zn1)
   )
-}
+
 
 PA <- terra::rast(PA)
 if (restorelock) {
