@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript
+# Pre-run
 purrr::walk(list.files(
   path = "R",
   pattern = "R",
@@ -17,12 +17,10 @@ terra::tmpFiles(remove = TRUE) # Clean existing temp layers
 # Local Data Only
 iso3 <- "ECU" 
 country <- "Ecuador"
-language <- "es"
+language <- "en"
 blm <- 0
 palock <- TRUE
 restorelock <- FALSE
-urb_green <- FALSE
-project <- FALSE
 weight_cal <- FALSE
 
 ELSA_df <- readxl::read_xlsx("Ecuador_Master_ELSA_Database.xlsx", sheet = "ELSA_data_stack") %>%
@@ -32,142 +30,69 @@ ELSA_text <- readxl::read_xlsx("Translation matrix of the ELSA webtool.xlsx", sh
 
 readr::write_rds(ELSA_text, here::here(".", "elsa_text.rds"), compress = "gz")
 
-if ("urban_greening" %in% names(ELSA_df)) {
-  protect_budget <-
-    ELSA_df[ELSA_df$groups == "Budgets", "protect"] %>%
-    tidyr::drop_na() %>%
-    dplyr::pull() %>%
-    as.numeric() %>%
-    plyr::round_any(1e-4, ceiling)
-  manage_budget <-
-    ELSA_df[ELSA_df$groups == "Budgets", "manage"] %>%
-    tidyr::drop_na() %>%
-    dplyr::pull() %>%
-    as.numeric() %>%
-    plyr::round_any(1e-4, ceiling)
-  restore_budget <-
-    ELSA_df[ELSA_df$groups == "Budgets", "restore"] %>%
-    tidyr::drop_na() %>%
-    dplyr::pull() %>%
-    as.numeric() %>%
-    plyr::round_any(1e-4, ceiling)
-  green_budget <-
-    ELSA_df[ELSA_df$groups == "Budgets", "urban_greening"] %>%
-    tidyr::drop_na() %>%
-    dplyr::pull() %>%
-    as.numeric() %>%
-    plyr::round_any(1e-4, ceiling)
-} else {
-  protect_budget <-
-    ELSA_df[ELSA_df$groups == "Budgets", "protect"] %>%
-    tidyr::drop_na() %>%
-    dplyr::pull() %>%
-    as.numeric() %>%
-    plyr::round_any(1e-4, ceiling)
-  manage_budget <-
-    ELSA_df[ELSA_df$groups == "Budgets", "manage"] %>%
-    tidyr::drop_na() %>%
-    dplyr::pull() %>%
-    as.numeric() %>%
-    plyr::round_any(1e-4, ceiling)
-  restore_budget <-
-    ELSA_df[ELSA_df$groups == "Budgets", "restore"] %>%
-    tidyr::drop_na() %>%
-    dplyr::pull() %>%
-    as.numeric() %>%
-    plyr::round_any(1e-4, ceiling)
-}
+protect_budget <-
+  ELSA_df[ELSA_df$groups == "Budgets", "protect"] |> 
+  tidyr::drop_na() |> 
+  dplyr::pull() |> 
+  as.numeric() |> 
+  plyr::round_any(1e-4, ceiling)
+manage_budget <-
+  ELSA_df[ELSA_df$groups == "Budgets", "manage"] |> 
+  tidyr::drop_na()  |> 
+  dplyr::pull() |> 
+  as.numeric() |> 
+  plyr::round_any(1e-4, ceiling)
+restore_budget <-
+  ELSA_df[ELSA_df$groups == "Budgets", "restore"] |> 
+  tidyr::drop_na()  |> 
+  dplyr::pull() |> 
+  as.numeric() |> 
+  plyr::round_any(1e-4, ceiling)
 
-if (urb_green) {
-  feat_df <- ELSA_df %>%
-    dplyr::slice(1:match("Zones", ELSA_df$groups)) %>%
-    dplyr::filter(groups == "Features" & !is.na(protect)) %>%
-    dplyr::mutate(
-      feat_name = file_name,
-      protect = as.numeric(protect),
-      manage = as.numeric(manage),
-      restore = as.numeric(restore),
-      green = as.numeric(urban_greening),
-      label = case_when(
-        language != "en" ~ label_name_translated,
-        language == "en" ~ label_name
-      ),
-      theme = case_when(
-        language != "en" ~ label_theme_translated,
-        language == "en" ~ label_theme
-      ),
-      policy_num = ifelse(
-        is.na(secondary_policy),
-        primary_policy,
-        glue::glue("{primary_policy},{secondary_policy}")
-      )
-    ) %>%
-    dplyr::select(
-      groups,
-      label,
-      theme,
-      feature_order,
-      protect,
-      manage,
-      restore,
-      green,
-      weight_stakeholder,
-      weight_calibration,
-      weight_final,
-      policy_num,
-      policy_short,
-      policy_long,
-      descriptions = layer_description,
-      citation,
-      citation_short,
-      feat_name
+feat_df <- ELSA_df |> 
+  dplyr::slice(1:match("Zones", ELSA_df$groups)) |> 
+  dplyr::filter(groups == "Features" & !is.na(protect))  |> 
+  dplyr::mutate(
+    feat_name = file_name,
+    protect = as.numeric(protect),
+    manage = as.numeric(manage),
+    restore = as.numeric(restore),
+    label = case_when(
+      language != "en" ~ label_name_translated,
+      language == "en" ~ label_name
+    ),
+    theme = case_when(
+      language != "en" ~ label_theme_translated,
+      language == "en" ~ label_theme
+    ),
+    policy_num = ifelse(
+      is.na(secondary_policy),
+      primary_policy,
+      glue::glue("{primary_policy},{secondary_policy}")
     )
-} else {
-  feat_df <- ELSA_df %>%
-    dplyr::slice(1:match("Zones", ELSA_df$groups)) %>%
-    dplyr::filter(groups == "Features" & !is.na(protect)) %>%
-    dplyr::mutate(
-      feat_name = file_name,
-      protect = as.numeric(protect),
-      manage = as.numeric(manage),
-      restore = as.numeric(restore),
-      label = case_when(
-        language != "en" ~ label_name_translated,
-        language == "en" ~ label_name
-      ),
-      theme = case_when(
-        language != "en" ~ label_theme_translated,
-        language == "en" ~ label_theme
-      ),
-      policy_num = ifelse(
-        is.na(secondary_policy),
-        primary_policy,
-        glue::glue("{primary_policy},{secondary_policy}")
-      )
-    ) %>%
-    dplyr::select(
-      groups,
-      label,
-      theme,
-      feature_order,
-      protect,
-      manage,
-      restore,
-      weight_stakeholder,
-      weight_calibration,
-      weight_final,
-      policy_num,
-      policy_short,
-      policy_long,
-      descriptions = layer_description,
-      citation,
-      citation_short,
-      feat_name
-    )
-}
+  ) %>%
+  dplyr::select(
+    groups,
+    label,
+    theme,
+    feature_order,
+    protect,
+    manage,
+    restore,
+    weight_stakeholder,
+    weight_calibration,
+    weight_final,
+    policy_num,
+    policy_short,
+    policy_long,
+    descriptions = layer_description,
+    citation,
+    citation_short,
+    feat_name
+  )
 
-zones_df <- ELSA_df %>%
-  dplyr::filter(groups == "Zones-restrictions") %>%
+zones_df <- ELSA_df |> 
+  dplyr::filter(groups == "Zones-restrictions") |> 
   dplyr::select(
     name = if_else(language != "en", "label_name_translated", "label_name"),
     short = policy_short,
@@ -244,11 +169,6 @@ man_zone <-
 rest_zone <-
   terra::rast(here::here("data/elsa_inputs", zones_df$file_name[3]))
 
-if (urb_green) {
-  green_zone <-
-    terra::rast(here::here("data/elsa_inputs", zones_df$file_name[4]))
-}
-
 # Locked in Constraints ####
 PA <- PA > 0.5
 PAN <- PA
@@ -309,64 +229,20 @@ if (restorelock & palock) {
   zone_manage_PARest[not.na(PA > 0) | not.na(Rest > 0)] <- NA
 }
 
-if (urb_green) {
-  zone_green <- green_zone
-  zone_green[zone_green < 1] <- NA
-  zone_green_PA <- zone_green
-  zone_green_PA[PA == 1] <- NA
-  zone_green_Rest <- zone_green
-  if (restorelock) {
-    zone_green_Rest[Rest > 0] <- NA
-  }
-  if (restorelock & palock) {
-    zone_green_PARest <- zone_green_Rest
-    zone_green_PARest[not.na(PA > 0) | not.na(Rest > 0)] <- NA
-  }
+pu1 <- c(zone_protect, zone_restore, zone_manage)
+pu1_pa <- c(zone_protect_PA, zone_restore_PA, zone_manage_PA)
+names(pu1) <- names(pu1_pa) <- c("protect", "restore", "manage")
+if (restorelock) {
+  pu1_rest <-
+    c(zone_protect_Rest, zone_restore_Rest, zone_manage_Rest)
+  names(pu1_rest) <- c("protect", "restore", "manage")
 }
-
-if (urb_green) {
-  pu1 <- c(zone_protect, zone_restore, zone_manage, zone_green)
-  pu1_pa <-
-    c(zone_protect_PA,
-      zone_restore_PA,
-      zone_manage_PA,
-      zone_green_PA)
-  names(pu1) <-
-    names(pu1_pa) <- c("protect", "restore", "manage", "green")
-  if (restorelock) {
-    pu1_rest <-
-      c(zone_protect_Rest,
-        zone_restore_Rest,
-        zone_manage_Rest,
-        zone_green_Rest)
-    names(pu1_rest) <- c("protect", "restore", "manage", "green")
-  }
-  if (restorelock & palock) {
-    pu1_parest <-
-      c(
-        zone_protect_PARest,
-        zone_restore_PARest,
-        zone_manage_PARest,
-        zone_green_PARest
-      )
-    names(pu1_parest) <- c("protect", "restore", "manage", "green")
-  }
-} else {
-  pu1 <- c(zone_protect, zone_restore, zone_manage)
-  pu1_pa <- c(zone_protect_PA, zone_restore_PA, zone_manage_PA)
-  names(pu1) <- names(pu1_pa) <- c("protect", "restore", "manage")
-  if (restorelock) {
-    pu1_rest <-
-      c(zone_protect_Rest, zone_restore_Rest, zone_manage_Rest)
-    names(pu1_rest) <- c("protect", "restore", "manage")
-  }
-  if (restorelock & palock) {
-    pu1_parest <-
-      c(zone_protect_PARest,
-        zone_restore_PARest,
-        zone_manage_PARest)
-    names(pu1_parest) <- c("protect", "restore", "manage")
-  }
+if (restorelock & palock) {
+  pu1_parest <-
+    c(zone_protect_PARest,
+      zone_restore_PARest,
+      zone_manage_PARest)
+  names(pu1_parest) <- c("protect", "restore", "manage")
 }
 
 if (restorelock & palock) {
@@ -387,64 +263,31 @@ if (restorelock & palock) {
 }
 
 # Impacts setup
-if (urb_green) {
-  protect_impacts <- feat_df$protect
-  restore_impacts <- feat_df$restore
-  manage_impacts <- feat_df$manage
-  green_impacts <- feat_df$green
-  
-  impacts <- data.frame(
-    Name = feat_df$label,
-    Theme = feat_df$theme,
-    feature = names(feat_stack),
-    Protect = as.numeric(protect_impacts),
-    Restore = as.numeric(restore_impacts),
-    Manage = as.numeric(manage_impacts),
-    Green = as.numeric(green_impacts)
-  )
-  
-  # features
-  zn1 <- feat_stack * impacts[, "Protect"]
-  zn2 <- feat_stack * impacts[, "Restore"]
-  zn3 <- feat_stack * impacts[, "Manage"]
-  zn4 <- feat_stack * impacts[, "Green"]
-  
-  ### Create Zone file
-  zns <- prioritizr::zones(
-    "Protect" = zn1,
-    "Restore" = zn2,
-    "Manage" = zn3,
-    "Green" = zn4,
-    feature_names = names(zn1)
-  )
-} else {
-  protect_impacts <- feat_df$protect
-  restore_impacts <- feat_df$restore
-  manage_impacts <- feat_df$manage
-  
-  impacts <- data.frame(
-    Name = feat_df$label,
-    Theme = feat_df$theme,
-    feature = names(feat_stack),
-    Protect = as.numeric(protect_impacts),
-    Restore = as.numeric(restore_impacts),
-    Manage = as.numeric(manage_impacts)
-  )
-  
-  # features
-  zn1 <- feat_stack * impacts[, "Protect"]
-  zn2 <- feat_stack * impacts[, "Restore"]
-  zn3 <- feat_stack * impacts[, "Manage"]
-  
-  ### Create Zone file
-  zns <- prioritizr::zones(
-    "Protect" = zn1,
-    "Restore" = zn2,
-    "Manage" = zn3,
-    feature_names = names(zn1)
-  )
-}
+protect_impacts <- feat_df$protect
+restore_impacts <- feat_df$restore
+manage_impacts <- feat_df$manage
 
+impacts <- data.frame(
+  Name = feat_df$label,
+  Theme = feat_df$theme,
+  feature = names(feat_stack),
+  Protect = as.numeric(protect_impacts),
+  Restore = as.numeric(restore_impacts),
+  Manage = as.numeric(manage_impacts)
+)
+
+# features
+zn1 <- feat_stack * impacts[, "Protect"]
+zn2 <- feat_stack * impacts[, "Restore"]
+zn3 <- feat_stack * impacts[, "Manage"]
+
+### Create Zone file
+zns <- prioritizr::zones(
+  "Protect" = zn1,
+  "Restore" = zn2,
+  "Manage" = zn3,
+  feature_names = names(zn1)
+)
 
 ################################################################################
 # Weight calibration
@@ -452,30 +295,16 @@ if (urb_green) {
 if (weight_cal) {
   pu_temp <- pu_all[["area"]][["locked"]]
   
-  if (urb_green) {
-    prob.ta <- prioritizr::problem(pu_temp, zns) %>%
-      prioritizr::add_max_utility_objective(c(
-        count_tar(pu0, protect_budget),
-        count_tar(pu0, restore_budget),
-        count_tar(pu0, manage_budget),
-        count_tar(pu0, green_budget)
-      )) %>%
-      prioritizr::add_gurobi_solver(gap = 0.05, threads = 8) # 16 Available on Gurobi Cloud
-    
-    prob.ta <- prob.ta %>%
-      prioritizr::add_locked_in_constraints(c(PA, PA0, PA0, PA0))
-  } else {
-    prob.ta <- prioritizr::problem(pu_temp, zns) %>%
-      prioritizr::add_max_utility_objective(c(
-        count_tar(pu0, protect_budget),
-        count_tar(pu0, restore_budget),
-        count_tar(pu0, manage_budget)
-      )) %>%
-      prioritizr::add_gurobi_solver(gap = 0.05, threads = 8) # 16 Available on Gurobi Cloud
-    
-    prob.ta <- prob.ta %>%
-      prioritizr::add_locked_in_constraints(c(PA, PA0, PA0))
-  }
+  prob.ta <- prioritizr::problem(pu_temp, zns) %>%
+    prioritizr::add_max_utility_objective(c(
+      count_tar(pu0, protect_budget),
+      count_tar(pu0, restore_budget),
+      count_tar(pu0, manage_budget)
+    )) %>%
+    prioritizr::add_gurobi_solver(gap = 0.05, threads = 8) # 16 Available on Gurobi Cloud
+  
+  prob.ta <- prob.ta %>%
+    prioritizr::add_locked_in_constraints(c(PA, PA0, PA0))
   
   s.ta <- solve(prob.ta, force = TRUE)
   
@@ -492,21 +321,8 @@ if (weight_cal) {
   
   rep[, -1] <- 0
   
-  if (urb_green) {
-    wgt <-
-      as.matrix(matrix(
-        rep(0, 4),
-        ncol = 4,
-        nrow = terra::nlyr(feat_stack)
-      ))
-  } else {
-    wgt <-
-      as.matrix(matrix(
-        rep(0, 3),
-        ncol = 3,
-        nrow = terra::nlyr(feat_stack)
-      ))
-  }
+  wgt <-
+    as.matrix(matrix(rep(0, 3), ncol = 3, nrow = terra::nlyr(feat_stack)))
   
   for (ii in 1:terra::nlyr(feat_stack)) {
     wgt2 <- wgt
@@ -540,21 +356,8 @@ if (weight_cal) {
   gc()
   
   # all groups
-  if (urb_green) {
-    wgt <-
-      as.matrix(matrix(
-        rep(1, 4),
-        ncol = 4,
-        nrow = terra::nlyr(feat_stack)
-      ))
-  } else {
-    wgt <-
-      as.matrix(matrix(
-        rep(1, 3),
-        ncol = 3,
-        nrow = terra::nlyr(feat_stack)
-      ))
-  }
+  wgt <-
+    as.matrix(matrix(rep(1, 3), ncol = 3, nrow = terra::nlyr(feat_stack)))
   
   prob.all <- prob.ta %>%
     prioritizr::add_feature_weights(wgt)
@@ -728,9 +531,7 @@ pu <- terra::wrap(pu)
 zn1 <- terra::wrap(zn1)
 zn2 <- terra::wrap(zn2)
 zn3 <- terra::wrap(zn3)
-if (urb_green) {
-  zn4 <- terra::wrap(zn4)
-}
+
 save.image(here::here("pre_global.RData"), compress = "gzip")
 
 gc()
