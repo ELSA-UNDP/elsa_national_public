@@ -21,7 +21,6 @@ list.of.packages <- c(
   "Matrix",
   "tidyr",
   "gurobi",
-  "tmap",
   "zip",
   "DT",
   "argparser"

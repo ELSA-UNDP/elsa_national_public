@@ -181,7 +181,7 @@ ui <- dashboardPage(
           ELSA_text %>%
             filter(var == "tab_input") %>%
             pull(language),
-          tmapOutput("InMap", height = 700)
+          leafletOutput("InMap", height = 700)
         ),
         tabPanel(
           ELSA_text %>%
@@ -238,7 +238,7 @@ ui <- dashboardPage(
           ELSA_text
           %>% filter(var == "tab_map") %>%
             pull(language),
-          tmapOutput("cadMap", height = 700)
+          leafletOutput("cadMap", height = 700)
         )
       )
     ))

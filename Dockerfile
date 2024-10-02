@@ -48,7 +48,7 @@ RUN Rscript -e 'install.packages(c(\
   "googlesheets4",\
   "Matrix",\
   "tidyr",\
-  "tmap",\
+  "leaflet",\
   "zip",\
   "glue",\
   "DT",\
