@@ -151,11 +151,3 @@ theme_tbl <- tibble(
   names = theme_names,
   layers = theme_layers
 )
-
-# # Define user credentials
-# credentials <- tibble::tibble(
-#   user = c("ELSA", "scott"), # mandatory
-#   password = c("123456", "elsa"), # mandatory
-#   admin = c(FALSE, TRUE),
-#   comment = "Simple and secure authentification mechanism for single 'Shiny' applications."
-# )

@@ -61,32 +61,6 @@ ui <- dashboardPage(
       )
     ),
     
-    # # Authentication Module - If required
-    # auth_ui(
-    #   id = "auth",
-    #   # add image on top ?
-    #   tags_top = tags$div(tags$h4(ELSA_text %>%
-    #     filter(var == "subtitle") %>%
-    #     pull(language),
-    #   style = "align:center"
-    #   )),
-    #   # add information on bottom ?
-    #   tags_bottom = tags$div(
-    #     tags$p(
-    #       ELSA_text %>%
-    #         filter(var == "questions") %>%
-    #         pull(language),
-    #       tags$a(
-    #         href = "mailto:support@unbiodiversitylab.org?Subject=ELSA too",
-    #         target = "_top",
-    #         "UNBL Support"
-    #       )
-    #     )
-    #   ),
-    #   # Set language in Login
-    #   lan = use_language(language)
-    # ),
-    
     # Boxes need to be put in a row (or column)
     fluidRow(column(
       width = 3,
