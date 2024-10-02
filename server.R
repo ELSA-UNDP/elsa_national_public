@@ -9,12 +9,12 @@
 #'
 #' @examples
 server <- function(input, output, session) {
-  # # Authentication module ####
-  # auth <- callModule(
-  #   module = auth_server,
-  #   id = "auth",
-  #   check_credentials = check_credentials(credentials)
-  # )
+  
+  # Helper function to enforce min values in the UI
+  reset_and_enforce_min <- function(input_id, temp_reset_value, min_value) {
+    # Reset the input to temporary reset value to clear any previous state
+    updateNumericInput(session, input_id, min = 0, value = temp_reset_value)
+    # Set the actual min value after the reset
   
   output$res_auth <- renderPrint({
     reactiveValuesToList(auth)
@@ -820,18 +820,7 @@ server <- function(input, output, session) {
       zip::zip(file, files)
     }
   )
-  
-  output$download_ssoln_csv <- downloadHandler(
-    filename = function()
-    {
-      glue::glue("ELSA_summary_results_{Sys.Date()}.csv")
-    },
-    content = function(file)
-    {
-      readr::write_csv(my.data()$feat_rep_tabl, file)
-    }
-  )
-  
+
   output$download_ssoln_xlsx <- downloadHandler(
     filename = function()
     {

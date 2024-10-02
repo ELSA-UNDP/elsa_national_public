@@ -221,12 +221,6 @@ ui <- dashboardPage(
             "</h4>"
           )),
           downloadButton(
-            "download_ssoln_csv",
-            label = glue(
-              "{ELSA_text %>% filter(var == 'd_load') %>% pull(language)} {ELSA_text %>%  filter(var == 'summary') %>% pull(language)} (CSV)"
-            )
-          ),
-          downloadButton(
             "download_ssoln_xlsx",
             label = glue(
               "{ELSA_text %>% filter(var == 'd_load') %>% pull(language)} {ELSA_text %>%  filter(var == 'summary') %>% pull(language)} (Excel)"
