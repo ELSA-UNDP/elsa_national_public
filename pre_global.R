@@ -470,6 +470,14 @@ theme_tbl <- tibble(
 )
 gc()
 
+# Get minimum budget values per each lock-in scenario
+default_protect_min_budget <- round(get_coverage(PA, pu), 2)
+if (restorelock) {
+default_restore_min_budget <- round(get_coverage(Rest, pu), 2)
+} else {
+  default_restore_min_budget <- 0
+}
+
 PA <- terra::wrap(PA)
 if (restorelock) {
   Rest <- terra::wrap(Rest)

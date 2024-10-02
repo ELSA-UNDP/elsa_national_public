@@ -15,26 +15,87 @@ server <- function(input, output, session) {
     # Reset the input to temporary reset value to clear any previous state
     updateNumericInput(session, input_id, min = 0, value = temp_reset_value)
     # Set the actual min value after the reset
+    updateNumericInput(session, input_id, min = min_value, value = max(input[[input_id]], min_value))
+  }
+  
+  # Monitor the lock-in option and update the min budget values dynamically
+  observeEvent(input$protected, {
+    selected_value <- input$protected
+    
+    # Reset and enforce min values based on the selected protection
+    reset_and_enforce_min("zone_1_target", temp_reset_value = -1, min_value = 0)
+    reset_and_enforce_min("zone_2_target", temp_reset_value = -1, min_value = 0)
+    reset_and_enforce_min("zone_3_target", temp_reset_value = -1, min_value = 0)
+    
+    # Dynamically set min values based on input$protected
+    isolate({
+      if (selected_value == prot_lst[1]) {
+        reset_and_enforce_min("zone_1_target", temp_reset_value = 0, min_value = default_protect_min_budget)
+        reset_and_enforce_min("zone_2_target", temp_reset_value = 0, min_value = default_restore_min_budget)
+        reset_and_enforce_min("zone_3_target", temp_reset_value = 0, min_value = 0)
+      } else if (selected_value == prot_lst[2]) {
+        reset_and_enforce_min("zone_1_target", temp_reset_value = 0, min_value = paoecm_lockin_min_budget)
+        reset_and_enforce_min("zone_2_target", temp_reset_value = 0, min_value = default_restore_min_budget)
+        reset_and_enforce_min("zone_3_target", temp_reset_value = 0, min_value = 0)
+      } else if (selected_value == prot_lst[3]) {
+        reset_and_enforce_min("zone_1_target", temp_reset_value = 0, min_value = default_protect_min_budget)
+        reset_and_enforce_min("zone_2_target", temp_reset_value = 0, min_value = restore_snap_lockin_min_budget)
+        reset_and_enforce_min("zone_3_target", temp_reset_value = 0, min_value = 0)
+      } else if (selected_value == prot_lst[4]) {
+        reset_and_enforce_min("zone_1_target", temp_reset_value = 0, min_value = paoecm_lockin_min_budget)
+        reset_and_enforce_min("zone_2_target", temp_reset_value = 0, min_value = restore_snap_lockin_min_budget)
+        reset_and_enforce_min("zone_3_target", temp_reset_value = 0, min_value = 0)
+      } else if (selected_value == prot_lst[5]) {
+        reset_and_enforce_min("zone_1_target", temp_reset_value = 0, min_value = default_protect_min_budget)
+        reset_and_enforce_min("zone_2_target", temp_reset_value = 0, min_value = default_restore_min_budget)
+        reset_and_enforce_min("zone_3_target", temp_reset_value = 0, min_value = 0)
+      } else {
+        reset_and_enforce_min("zone_1_target", temp_reset_value = 0, min_value = default_protect_min_budget)
+        reset_and_enforce_min("zone_2_target", temp_reset_value = 0, min_value = default_restore_min_budget)
+        reset_and_enforce_min("zone_3_target", temp_reset_value = 0, min_value = 0)}
+    })
+  })
+  
+  # Monitor the individual target inputs and dynamically enforce minimum values based on input$protected
+  observeEvent(input$zone_1_target, {
+    selected_value <- input$protected
+    if (selected_value == prot_lst[1] || selected_value == prot_lst[3] || selected_value == prot_lst[5]) {
+      reset_and_enforce_min("zone_1_target", temp_reset_value = input$zone_1_target, min_value = default_protect_min_budget)
+    } else if (selected_value == prot_lst[2] || selected_value == prot_lst[4]) {
+      reset_and_enforce_min("zone_1_target", temp_reset_value = input$zone_1_target, min_value = paoecm_lockin_min_budget)
+    }
+  })
+  
+  observeEvent(input$zone_2_target, {
+    selected_value <- input$protected
+    if (selected_value == prot_lst[1] || selected_value == prot_lst[2] || selected_value == prot_lst[5]) {
+      reset_and_enforce_min("zone_2_target", temp_reset_value = input$zone_2_target, min_value = default_restore_min_budget)
+    } else if (selected_value == prot_lst[3] || selected_value == prot_lst[4]) {
+      reset_and_enforce_min("zone_2_target", temp_reset_value = input$zone_2_target, min_value = restore_snap_lockin_min_budget)
+    }
+  })
+  
+  # No observeEvent() required for zone 3 budget
   
   output$res_auth <- renderPrint({
     reactiveValuesToList(auth)
   })
-  
+
   session$onSessionEnded(function() {
     stopApp()
   })
-  
+
   values <- reactiveValues(hot_wgt = wgts, hot_imp = impacts)
-  
+
   calc <- reactive({
     # Load initial values ####
     df1 <- values[["hot_wgt"]]
     df3 <- values[["hot_imp"]]
-    
+
     list(wgts = df1, impacts = df3)
   })
-  
-  ## Edit Weights ####
+
+#### Edit Weights ####
   output$hot_wgt <- renderRHandsontable({
     if (!is.null(input$hot_wgt)) {
       DF <- hot_to_r(input$hot_wgt)
