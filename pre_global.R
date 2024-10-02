@@ -111,47 +111,6 @@ lockin_df <- ELSA_df %>%
 
 rm(ELSA_df)
 
-if (project) {
-  terra::rast(here::here("data/inputs", feat_df$feat_name)) %>%
-    terra::trim() %>%
-    terra::classify(cbind(NA, -9999)) %>%
-    terra::writeRaster(
-      here::here("data/elsa_inputs", feat_df$feat_name),
-      gdal = c("COMPRESS=DEFLATE",
-               "TILED=YES",
-               "NUM_THREADS=ALL_CPUS"),
-      datatype = "FLT4S",
-      NAflag = -9999,
-      overwrite = TRUE
-    )
-  
-  terra::rast(here::here("data/inputs", lockin_df$file_name)) %>%
-    terra::crop(feat_stack) %>%
-    terra::classify(cbind(NA, -9999)) %>%
-    terra::writeRaster(
-      here::here("data/elsa_inputs", lockin_df$file_name),
-      gdal = c("COMPRESS=DEFLATE",
-               "TILED=YES",
-               "NUM_THREADS=ALL_CPUS"),
-      datatype = "FLT4S",
-      NAflag = -9999,
-      overwrite = TRUE
-    )
-  
-  terra::rast(here::here("data/inputs", zones_df$file_name)) %>%
-    terra::crop(feat_stack) %>%
-    terra::classify(cbind(NA, 255)) %>%
-    terra::writeRaster(
-      here::here("data/elsa_inputs", zones_df$file_name),
-      gdal = c("COMPRESS=DEFLATE",
-               "TILED=YES",
-               "NUM_THREADS=ALL_CPUS"),
-      datatype = "INT1U",
-      NAflag = 255,
-      overwrite = TRUE
-    )
-}
-
 # Data layers ####
 feat_stack <-
   terra::rast(here::here("data/elsa_inputs", feat_df$feat_name))

@@ -94,8 +94,7 @@ ARG blm=0
 ARG pa_lock=true
 ARG restore_lock=false
 ARG urban_green=false
-ARG project=false
 
-RUN Rscript pre_global.R -i $iso3 -n "$location" -l $language -g $googlesheet -s $sheetname -b $blm -p $pa_lock -r $restore_lock -u $urban_green -t $project
+RUN Rscript pre_global.R -i $iso3 -n "$location" -l $language -g $googlesheet -s $sheetname -b $blm -p $pa_lock -r $restore_lock -u $urban_green
 
 CMD ["/usr/bin/shiny-server"]

@@ -15,7 +15,6 @@ services:
         - pa_lock=TRUE
         - urban_green=FALSE
         - restore_lock=FALSE
-        - project=FALSE
     expose:
         - 3838
     network_mode: bridge
