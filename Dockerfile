@@ -62,15 +62,6 @@ RUN Rscript -e 'remotes::install_github(c(\
 
 RUN R -e 'install.packages("prioritizr", repos = "https://cran.rstudio.com/")'
 
-ADD gurobi11.0.3_linux64.tar.gz /opt
-
-RUN R -e 'install.packages("/opt/gurobi1103/linux64/R/gurobi_11.0-3_R_4.4.0.tar.gz", repos = NULL)'
-
-# May be needed to get Gurobi working
-RUN echo "/opt/gurobi1103/linux64/lib" > /etc/ld.so.conf.d/gurobi.conf
-
-RUN ldconfig
-
 COPY . /srv/shiny-server/
 
 RUN chown -R shiny:shiny /srv/shiny-server/
