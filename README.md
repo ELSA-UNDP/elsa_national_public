@@ -22,7 +22,7 @@ Additionally, this repository contains a `R/` folder with helper functions for d
 
 There are several steps required before running this tool. We will first briefly describe the steps needed to employ this tool in one of the countries outlined above and then outline the steps required to run the Shiny application for the case study outlined here and in the manuscript by Venter et al. (2024).
 
-##### For applying the ELSA tool to a country of interest, the following are required:
+#### For applying the ELSA tool to a country of interest, the following are required:
 
 **Note that only step 4 is required if you only want to run the app for the case study (skip steps 1-3).**
 
@@ -34,7 +34,7 @@ There are several steps required before running this tool. We will first briefly
 
 4.  A solver to solve the the conservation planning problem. There is a range of solvers available that differ in terms of performance and cost. For our analysis and the figures shown in Venter et al. (2024), we used the commercial [Gurobi software](https://www.gurobi.com/solutions/gurobi-optimizer/). To allow to run the ELSA tool without a Gurobi license, we recommend installing a free solver. We include the free [HiGHS](https://highs.dev/) software in the package requirements in the `start.R` script, so no additional installations from your side are required, but any solver supported by the [`prioritizr`](https://prioritizr.net/) R package can be used. Simply add the R package interfacing the solver of your choice to the list of required packages in the `start.R`script. **Note that your results might differ slightly from those shown in the manuscript depending on the solver used.**
 
-##### After ensuring the data and software described above are all available and correctly installed, the following steps are required to run the ELSA tool:
+#### After ensuring the data and software described above are all available and correctly installed, the following steps are required to run the ELSA tool:
 
 **Note that step 2 is NOT required if you only want to run the app for the case study.**
 
