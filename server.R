@@ -105,7 +105,7 @@ server <- function(input, output, session) {
 
       prob.ta <-
         prioritizr::problem(pu_temp, zns, run_checks = FALSE) %>%
-        prioritizr::add_gurobi_solver(gap = 0.05, threads = 8)
+        prioritizr:: add_default_solver(gap = 0.05, threads = 8)#add_gurobi_solver(gap = 0.05, threads = 8)
 
 
       if (input$protected == "avail") {
@@ -215,11 +215,16 @@ server <- function(input, output, session) {
 
       # Combine the overall totals with the relative values
       feat_rep <- overall_rep %>%
-        dplyr::left_join(relative_rep, by = "feature")
+        dplyr::left_join(relative_rep, by = "feature") %>%
+        dplyr::rename(
+          "{ELSA_text %>% filter(var == 'protect') %>% pull(language)}" := Protect,
+          "{ELSA_text %>% filter(var == 'restore') %>% pull(language)}" := Restore,
+          "{ELSA_text %>% filter(var == 'manage') %>% pull(language)}" := Manage
+        )
 
       elsa_result_multi <- feat_rep.lst <- list()
 
-      browser()
+      #browser()
       if (input$multipri == TRUE) {
         for (ii in 1:nrow(theme_tbl)) {
           progress$set(
@@ -300,7 +305,12 @@ server <- function(input, output, session) {
           # Combine the overall totals with the relative values
           feat_rep.lst[[ii]] <- overall_rep %>%
             dplyr::left_join(relative_rep, by = "feature") %>%
-            dplyr::select(-"total_amount_overall")
+            dplyr::select(-"total_amount_overall") %>%
+            dplyr::rename(
+              "{ELSA_text %>% filter(var == 'protect') %>% pull(language)}" := Protect,
+              "{ELSA_text %>% filter(var == 'restore') %>% pull(language)}" := Restore,
+              "{ELSA_text %>% filter(var == 'manage') %>% pull(language)}" := Manage
+            )
 
           rm(wgt.tmp, prob.tmp)
         }
@@ -377,7 +387,7 @@ server <- function(input, output, session) {
         #     "{ELSA_text %>% filter(var == 'elsa_tradeoff') %>% pull(language)}" := elsa_tradeoff
         #  )
       } else { # don't we need this anyway if we want to show ELSA without multipri as well?
-        feature_rep_tabl <- feature_rep %>%
+        feature_rep_tabl <- feat_rep %>%
           dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) %>%
           # dplyr::rename_with(~ as_tibble(cats(elsa_raster)[[1]])$label, .cols = -c(1:3)) %>%
           dplyr::select(3:6) %>%
@@ -389,7 +399,7 @@ server <- function(input, output, session) {
           dplyr::rename(
             "{ELSA_text %>% filter(var == 'data') %>% pull(language)}" := Name,
             "{ELSA_text %>% filter(var == 'theme') %>% pull(language)}" := Theme,
-            "{ELSA_text %>% filter(var == 'overall') %>% pull(language)}" := relative_held_overall,
+            "{ELSA_text %>% filter(var == 'overall') %>% pull(language)}" := relative_held_overall
           )
 
         # feat_rep_tabl <-
@@ -416,7 +426,7 @@ server <- function(input, output, session) {
         elsa_result_multi = elsa_result_multi,
         feat_rep = feat_rep,
         feat_rep.lst = feat_rep.lst,
-        feat_rep_tabl = feat_rep_tabl
+        feat_rep_tabl = feature_rep_tabl
       )
 
       progress$set(value = 1)
