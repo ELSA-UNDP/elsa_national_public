@@ -189,7 +189,7 @@ server <- function(input, output, session) {
 
       # Solve conservation problem ####
       elsa_result <- solve(prob.all, force = TRUE)
-      # browser()
+      browser()
 
       # get feature representation
 
@@ -327,11 +327,6 @@ server <- function(input, output, session) {
         value = 0.9
       )
 
-
-      # rh_rep <- feat_rep %>%
-      #   dplyr::group_by(feature) %>%
-      #   dplyr::summarise(ELSA = round(sum(relative_held_overall, na.rm = T) * 100, 0)) # what is this meant to do?
-
       if (input$multipri == TRUE) {
         # rh.lst <- list()
 
@@ -356,37 +351,7 @@ server <- function(input, output, session) {
           dplyr::rename(
             "{ELSA_text %>% filter(var == 'elsa_tradeoff') %>% pull(language)}" := elsa_tradeoff
           )
-
-
-        # feat_rep_tabl <-
-        #   feat_rep[feat_rep$zone == "Protect", c("feature")] %>%
-        #   dplyr::left_join(rh_rep, by = "feature")
-
-        # for (ii in 1:nrow(theme_tbl)) {
-        #   rh.lst[[ii]] <- feat_rep.lst[[ii]] %>%
-        #     dplyr::group_by(feature) %>%
-        #     dplyr::summarise(
-        #       !!stringr::str_glue(
-        #         theme_tbl$theme[[ii]],
-        #         " {ELSA_text %>% filter(var == 'action') %>% pull(language)}"
-        #       ) := round(sum(relative_held, na.rm = T) * 100, 0)
-        #     )
-        #   feat_rep_tabl <- feat_rep_tabl %>%
-        #     dplyr::left_join(rh.lst[[ii]], by = "feature")
-        # }
-
-        # feat_rep_tabl <- feat_rep_tabl %>%
-        #   dplyr::rowwise() %>%
-        #   dplyr::mutate(elsa_tradeoff = round(ELSA / max(c_across(3:5)) * 100, 0)) %>% # ELSA Trade-off relative to other scenarios
-        #   # tibble::add_column(
-        #   #   Name = feat_df$label,
-        #   #   Theme = feat_df$theme,
-        #   #   .before = 1
-        #   # ) %>%
-        #   dplyr::rename(
-        #     "{ELSA_text %>% filter(var == 'elsa_tradeoff') %>% pull(language)}" := elsa_tradeoff
-        #  )
-      } else { # don't we need this anyway if we want to show ELSA without multipri as well?
+      } else { 
         feature_rep_tabl <- feat_rep %>%
           dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) %>%
           # dplyr::rename_with(~ as_tibble(cats(elsa_raster)[[1]])$label, .cols = -c(1:3)) %>%
@@ -401,23 +366,7 @@ server <- function(input, output, session) {
             "{ELSA_text %>% filter(var == 'theme') %>% pull(language)}" := Theme,
             "{ELSA_text %>% filter(var == 'overall') %>% pull(language)}" := relative_held_overall
           )
-
-        # feat_rep_tabl <-
-        #   feat_rep[feat_rep$zone == "Protect", c("feature")] %>%
-        #   dplyr::left_join(rh_rep, by = "feature") %>%
-        #   tibble::add_column(
-        #     Name = feat_df$label,
-        #     Theme = feat_df$theme,
-        #     .before = 1
-        #   ) %>%
-        #   dplyr::select(-c(feature))
       }
-
-      # feat_rep_tabl <- feat_rep_tabl %>%
-      #   dplyr::rename(
-      #     "{ELSA_text %>% filter(var == 'data') %>% pull(language)}" := Name,
-      #     "{ELSA_text %>% filter(var == 'theme') %>% pull(language)}" := Theme
-      #   )
 
       rlist <- list(
         sel.fr = feat_rep,
@@ -440,6 +389,7 @@ server <- function(input, output, session) {
   observe({
     my.data()
   })
+
 
   output$InMap <- renderLeaflet({
     # Leaflet input datasets map ####
@@ -616,6 +566,10 @@ server <- function(input, output, session) {
       pageLength = 9
     )
   )
+  
+  output$gg_repStacked <- shiny::renderPlot({
+    elsar_plot_repStacked(my.data()$feat_rep_tabl, input)
+  }) 
 
   output$downloadSHP <- downloadHandler(
     filename = function() {

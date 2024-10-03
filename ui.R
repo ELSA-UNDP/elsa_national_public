@@ -239,6 +239,8 @@ ui <- dashboardPage(
           )),
           DT::dataTableOutput("summary"),
           helpText(HTML("<br>")),
+          shiny::plotOutput("gg_repStacked", width = "60%"), 
+          helpText(HTML("<br>")),
           helpText(HTML(
             "<h4>",
             ELSA_text %>%
