@@ -1,4 +1,5 @@
-#!/usr/bin/env Rscript
+# R script to pre-process all the data and parameters needed to set up the ELSA tool #### 
+
 purrr::walk(
   list.files(
     path = "R",

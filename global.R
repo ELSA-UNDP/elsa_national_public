@@ -1,13 +1,18 @@
-source("R/packages.R")
+# R script to prepare global variables called in the ELSA tool ####
 
+# load packages and prepared data ####
+source("R/packages.R")
 load("pre_global.RData")
 
+# prepare text for ELSA tool ####
 ELSA_text <- readr::read_rds(here::here(".", "elsa_text.rds"))
 
+# set global parameters ####
 language <- language
 country <- country # "Ecuador"
 restorelock <- restorelock
 
+# custom function ####
 `%nin%` <- Negate(`%in%`)
 
 if (restorelock & palock) {
@@ -45,7 +50,7 @@ names(area_lst) <- ELSA_text |>
   dplyr::filter(var == "area")  |>
   dplyr::pull(language)
 
-#### Colour Palettes
+# Colour Palettes ####
 pal.elsa <- tibble(
   colour = c("#4daf4a", "#984ea3", "#377eb8"),
   category = c("Protect", "Restore", "Manage")
@@ -54,7 +59,7 @@ pal.hm <- c("#440154", "#3B528B", "#21908C", "#5DC863", "#FDE725")
 pal.in <- c("#0D0887", "#7E03A8", "#CC4678", "#F89441", "#F0F921")
 pal.zone <- "#6afdfa"
 
-#### Load spatial data layers ####
+# Load spatial data layers ####
 # Data layers ####
 feat_stack <-
   terra::rast(here::here("data/elsa_inputs", feat_df$feat_name))
@@ -70,7 +75,7 @@ zn1 <- terra::rast(zn1)
 zn2 <- terra::rast(zn2)
 zn3 <- terra::rast(zn3)
 
-### Create Zone file
+# Create Zone file ####
 zns <- prioritizr::zones(
   "Protect" = zn1,
   "Restore" = zn2,
@@ -78,7 +83,7 @@ zns <- prioritizr::zones(
   feature_names = names(zn1)
 )
 
-### Create data frame for representation calculations
+#Create data frame for representation calculations ####
 feat_stack_raw <- terra::rast(feat_stack_raw)  
 # Calculate the sum of each layer
 layer_sums <- terra::global(feat_stack_raw, sum, na.rm = TRUE)
@@ -92,7 +97,8 @@ overall_raw_df <- data.frame(
 )
 
 rm(layer_sums, layer_names)
-  
+
+# Unwrap data additional data ####  
 PA <- terra::rast(PA)
 if (restorelock) {
   Rest <- terra::rast(Rest)
@@ -125,6 +131,7 @@ if (restorelock & palock) {
   }
 }
 
+# prepare themes information (Biodiversity, climate change mitigation, human well-being) ####
 themes <- unique(feat_df$theme)
 theme_names <- list()
 theme_layers <- list()
