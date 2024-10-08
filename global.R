@@ -78,7 +78,21 @@ zns <- prioritizr::zones(
   feature_names = names(zn1)
 )
 
+### Create data frame for representation calculations
+feat_stack_raw <- terra::rast(feat_stack_raw)  
+# Calculate the sum of each layer
+layer_sums <- terra::global(feat_stack_raw, sum, na.rm = TRUE)
+# Extract the names of each layer
+layer_names <- terra::names(feat_stack_raw)
 
+# Create a data frame with layer names and their corresponding sums
+overall_raw_df <- data.frame(
+  feature = layer_names,
+  total_amount = layer_sums[, 1] # First column of the global output
+)
+
+rm(layer_sums, layer_names)
+  
 PA <- terra::rast(PA)
 if (restorelock) {
   Rest <- terra::rast(Rest)

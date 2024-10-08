@@ -254,26 +254,29 @@ server <- function(input, output, session) {
       # First get overall info from prioritizr
       overall_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result) |> 
         dplyr::rename(
-          zone = summary,
-          relative_held_overall = relative_held,
-          total_amount_overall = total_amount
-        ) |> 
-        filter(zone == "overall") |> 
-        dplyr::select(-"zone", -"absolute_held")
-
+          zone = summary
+        ) %>%
+        filter(zone == "overall") %>%
+        dplyr::select("feature", "absolute_held") %>%
+        dplyr::left_join(overall_raw_df, by = "feature") %>%
+        dplyr::mutate(relative_held_overall = absolute_held / total_amount)
+      
       # Calculate relative values for each zone and pivot them into new columns
-      relative_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result)  |> 
-        dplyr::rename(zone = summary)  |> 
-        dplyr::filter(zone != "overall")  |> 
-        dplyr::select(zone, feature, absolute_held) |> 
-        dplyr::left_join(overall_rep, by = "feature")  |> 
-        dplyr::mutate(relative_held_zone = absolute_held / total_amount_overall) |> 
-        dplyr::select("zone", "feature", "relative_held_zone") |> 
+      relative_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result) %>%
+        dplyr::rename(
+          zone = summary
+        ) %>%
+        filter(zone != "overall") %>%
+        dplyr::select("feature", "absolute_held", "zone") %>%
+        dplyr::left_join(overall_raw_df, by = "feature") %>%
+        dplyr::mutate(relative_held_zone = absolute_held / total_amount) %>%
+        dplyr::select("zone", "feature", "relative_held_zone") %>%
         tidyr::pivot_wider(names_from = zone, values_from = relative_held_zone)
 
       # Combine the overall totals with the relative values
-      feat_rep <- overall_rep |> 
-        dplyr::left_join(relative_rep, by = "feature") |> 
+      feat_rep <- overall_rep %>%
+        dplyr::select("feature", "relative_held_overall") %>%
+        dplyr::left_join(relative_rep, by = "feature") %>%
         dplyr::rename(
           "{ELSA_text |>  filter(var == 'protect')  |>  pull(language)}" := Protect,
           "{ELSA_text |>  filter(var == 'restore') |>  pull(language)}" := Restore,
@@ -282,7 +285,6 @@ server <- function(input, output, session) {
 
       elsa_result_multi <- feat_rep.lst <- list()
 
-      #browser()
       if (input$multipri == TRUE) {
         for (ii in 1:nrow(theme_tbl)) {
           progress$set(
@@ -337,29 +339,40 @@ server <- function(input, output, session) {
           #### Convert to categorical raster only one time and add to existing ELSA raster - so makes a stacked raster
           elsa_raster <- c(elsa_raster, make_elsa_categorical_raster(elsa_result_multi[[ii]]))
 
+          # feat_rep.lst[[ii]] <-
+          #   prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]]) %>%
+          #   dplyr::filter(summary != "overall") %>%
+          #   dplyr::rename(zone = summary)
+          #
+          # feat_rep.lst[[ii]]$relative_held <-
+          #   feat_rep.lst[[ii]]$relative_held * feat_rep$impact
+
           # First get overall info from prioritizr
-          overall_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result) |> 
+          overall_rep <- prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]]) %>%
             dplyr::rename(
-              zone = summary,
-              relative_held_overall = relative_held,
-              total_amount_overall = total_amount
-            ) |> 
-            filter(zone == "overall") |> 
-            dplyr::select(-"zone", -"absolute_held")
+              zone = summary
+            ) %>%
+            filter(zone == "overall") %>%
+            dplyr::select("feature", "absolute_held") %>%
+            dplyr::left_join(overall_raw_df, by = "feature") %>%
+            dplyr::mutate(relative_held_overall = absolute_held / total_amount)
           
           # Calculate relative values for each zone and pivot them into new columns
-          relative_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result)  |> 
-            dplyr::rename(zone = summary)  |> 
-            dplyr::filter(zone != "overall")  |> 
-            dplyr::select(zone, feature, absolute_held) |> 
-            dplyr::left_join(overall_rep, by = "feature")  |> 
-            dplyr::mutate(relative_held_zone = absolute_held / total_amount_overall) |> 
-            dplyr::select("zone", "feature", "relative_held_zone") |> 
+          relative_rep <- prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]]) %>%
+            dplyr::rename(
+              zone = summary
+            ) %>%
+            filter(zone != "overall") %>%
+            dplyr::select("feature", "absolute_held", "zone") %>%
+            dplyr::left_join(overall_raw_df, by = "feature") %>%
+            dplyr::mutate(relative_held_zone = absolute_held / total_amount) %>%
+            dplyr::select("zone", "feature", "relative_held_zone") %>%
             tidyr::pivot_wider(names_from = zone, values_from = relative_held_zone)
           
           # Combine the overall totals with the relative values
-          feat_rep <- overall_rep |> 
-            dplyr::left_join(relative_rep, by = "feature") |> 
+          feat_rep.lst[[ii]] <- overall_rep %>%
+            dplyr::select("feature", "relative_held_overall") %>%
+            dplyr::left_join(relative_rep, by = "feature") %>%
             dplyr::rename(
               "{ELSA_text |>  filter(var == 'protect')  |>  pull(language)}" := Protect,
               "{ELSA_text |>  filter(var == 'restore') |>  pull(language)}" := Restore,
@@ -378,16 +391,14 @@ server <- function(input, output, session) {
       )
 
       if (input$multipri == TRUE) {
-        # rh.lst <- list()
-
+        
         feature_rep_tabl_comb <- purrr::reduce(seq_along(feat_rep.lst), function(x, i) {
-          # Subset first data frame (i == 1) to columns 1:3, the rest to columns 1 and 3
           df <- feat_rep.lst[[i]][, c(1, 2)]
           colnames(df)[2] <- themes[[i]]
 
           # Join the data frames
           dplyr::left_join(x, df, by = setNames(names(x)[1], names(df)[1]))
-        }, .init = feat_rep[, c(1, 3)]) |> 
+        }, .init = feat_rep[, c(1,2)]) %>%
           tibble::add_column(
             Name = feat_df$label,
             Theme = feat_df$theme,
@@ -405,7 +416,7 @@ server <- function(input, output, session) {
         feature_rep_tabl <- feat_rep %>%
           dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) %>%
           # dplyr::rename_with(~ as_tibble(cats(elsa_raster)[[1]])$label, .cols = -c(1:3)) %>%
-          dplyr::select(3:6) %>%
+          dplyr::select(2:5) %>%
           tibble::add_column(
             Name = feat_df$label,
             Theme = feat_df$theme,

@@ -276,6 +276,9 @@ zn1 <- feat_stack * impacts[, "Protect"]
 zn2 <- feat_stack * impacts[, "Restore"]
 zn3 <- feat_stack * impacts[, "Manage"]
 
+# Also create raw feat_stack without impact that will be used for representation calculations
+feat_stack_raw <- feat_stack
+
 # Create prioritizr zones environment ####
 zns <- prioritizr::zones(
   "Protect" = zn1,
@@ -551,6 +554,7 @@ pu <- terra::wrap(pu)
 zn1 <- terra::wrap(zn1)
 zn2 <- terra::wrap(zn2)
 zn3 <- terra::wrap(zn3)
+feat_stack_raw <- terra::wrap(feat_stack_raw)
 save.image(here::here("pre_global.RData"), compress = "gzip")
 
 gc()
