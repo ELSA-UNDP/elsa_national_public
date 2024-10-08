@@ -1,3 +1,4 @@
+#Packages required
 suppressPackageStartupMessages({
   library(shiny)
   library(shinydashboard)
@@ -27,4 +28,5 @@ suppressPackageStartupMessages({
   library(glue)
   library(DT)
   library(argparser)
+  library(highs)
 })

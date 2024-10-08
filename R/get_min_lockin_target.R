@@ -1,6 +1,6 @@
 get_min_lockin_target <- function(lockin, input, pu) {
   min_coverage <- get_coverage(lockin, pu)
-  
+
   if (!is.null(input$zone_4_target)) {
     targets <- tibble::tibble(
       zone_1_target = ifelse(
