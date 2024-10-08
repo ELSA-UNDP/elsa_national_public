@@ -20,11 +20,10 @@ list.of.packages <- c(
   "googlesheets4",
   "Matrix",
   "tidyr",
-  "gurobi",
-  "tmap",
   "zip",
   "DT",
-  "argparser"
+  "argparser",
+  "highs"
 )
 
 new.packages <-

@@ -3,142 +3,155 @@ library(dplyr)
 library(glue)
 library(terra)
 
-fun_leaflet_elsa_1 <- function(feat_temp = NULL,
-                               heatm = NULL,
+fun_leaflet_elsa_1 <- function(multi_theme = NULL,
+                               elsa_hm = NULL,
+                               heatm_lst = NULL,
                                rast = NULL,
                                theme_tbl = NULL) {
-  # Determine the palette to use based on the max value of rast
-  if (terra::global(rast, max, na.rm = TRUE)$max == 4) {
-    tb <- get_palette(palette = pal.elsa,
-                      in_rast = terra::ifel(rast %in% 1:4, rast, NA))
-  } else {
-    tb <- get_palette(palette = pal.elsa,
-                      in_rast = terra::ifel(rast %in% 1:3, rast, NA))
-  }
+  # Create default leaflet basemap ####
+  map <- get_leaflet_basemap()
   
-  # Create an empty leaflet map
-  map <- leaflet() |>
-    addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
-    addTiles(
-      "https://api.mapbox.com/styles/v1/unbiodiversitylab/cl07p7r84000b15mw1ctxlqwo/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoidW5iaW9kaXZlcnNpdHlsYWIiLCJhIjoiY2xvZmJ5eHNkMDlqNjJxdWhjYjVlcG5sMSJ9.ATqw6HfibevC5ov5y6VTOQ",
-      group = "UNBL",
-      attribution = '© <a href="https://www.mapbox.com/contribute/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> | UN Geodata'
-    ) |>
-    addTiles(
-      "https://api.mapbox.com/styles/v1/unbiodiversitylab/cl5vpldzt000614qc8qnjutdy/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoidW5iaW9kaXZlcnNpdHlsYWIiLCJhIjoiY2xvZmJ5eHNkMDlqNjJxdWhjYjVlcG5sMSJ9.ATqw6HfibevC5ov5y6VTOQ",
-      group = "UNBL Dark",
-      attribution = '© <a href="https://www.mapbox.com/contribute/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> | UN Geodata'
+  # Add ELSA features ####
+  if (multi_theme) {
+    theme_group <- c(
+      glue(
+        "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
+      ),
+      glue(
+        "{theme_tbl$theme} {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
+      )
     )
-  
-  # Add the main feature layer based on the max value of rast
-  if (terra::global(rast, max, na.rm = TRUE)$max == 4) {
+    
+    for (n in 1:nlyr(rast)) {
+      # Get raster attributes ####
+      raster_attributes <- as_tibble(terra::cats(rast[[n]])[[1]]) |>
+        filter(value %in% unique(terra::values(rast[[n]])))
+      
+      map <- map |>
+        addRasterImage(
+          rast[[n]],
+          colors = raster_attributes$colour,
+          opacity = 0.8,
+          group = theme_group[n],
+          options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
+        ) |>
+        addLegend(
+          "topright",
+          colors = raster_attributes$colour,
+          values = raster_attributes$category,
+          title = theme_group[n],
+          labels = raster_attributes$label,
+          group = theme_group[n]
+        )
+    }
+  } else if (!multi_theme) {
+    # Get raster attributes ####
+    raster_attributes <- as_tibble(terra::cats(rast)[[1]]) |>
+      filter(value %in% unique(terra::values(rast)))
+    
     map <- map |>
       addRasterImage(
-        terra::ifel(rast %in% 1:4, rast, NA),
-        colors = tb |> dplyr::pull(colour),
+        rast,
+        colors = raster_attributes$colour,
         opacity = 0.8,
         group = glue(
           "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
-        )
+        ),
+        options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
       ) |>
       addLegend(
         "topright",
-        colors = tb |> dplyr::pull(colour),
-        values = tb |> dplyr::pull(breaks),
+        colors = raster_attributes$colour,
+        values = raster_attributes$category,
         title = glue(
           "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
         ),
-        labels = tb |> dplyr::pull(label)
-      )
-  } else {
-    map <- map |>
-      addRasterImage(
-        terra::ifel(rast %in% 1:3, rast, NA),
-        colors = tb |> dplyr::pull(colour),
-        opacity = 0.8,
-        group = glue(
-          "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
-        )
-      ) |>
-      addLegend(
-        "topright",
-        colors = tb |> dplyr::pull(colour),
-        values = tb |> dplyr::pull(breaks),
-        title = glue(
-          "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
-        ),
-        labels = tb |> dplyr::pull(label)
+        labels = raster_attributes$label
       )
   }
   
-  # Heat maps
-  if (terra::minmax(feat_temp)[2] == 0) {
+  # Heat maps ####
+  if (terra::minmax(elsa_hm)[2] == 0) {
+    # For when an heatmap only has one input layer?
     map <- map |>
-      addRasterImage(feat_temp,
-                     colors = pal.hm[1],
-                     opacity = 0.8,
-                     group = "ELSA HM") |>
+      addRasterImage(
+        elsa_hm,
+        colors = pal.hm[1],
+        opacity = 0.8,
+        group = "ELSA HM",
+        options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
+      ) |>
       addLegend(
         "topright",
         pal = colorNumeric(pal.hm[1], na.color = NA, domain = NULL),
-        values = terra::values(feat_temp),
+        values = terra::values(elsa_hm),
         title = "ELSA HM",
         group = "ELSA HM"
       )
   } else {
     map <- map |>
-      addRasterImage(feat_temp,
-                     colors = pal.hm,
-                     opacity = 0.8,
-                     group = "ELSA HM") |>
+      addRasterImage(
+        elsa_hm,
+        colors = pal.hm,
+        opacity = 0.8,
+        group = "ELSA HM",
+        options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
+      ) |>
       addLegend(
         "topright",
         pal = colorNumeric(pal.hm, na.color = NA, domain = NULL),
-        values = terra::values(feat_temp),
+        values = terra::values(elsa_hm),
         title = "ELSA HM",
         group = "ELSA HM"
       )
   }
   
-  # Add theme layers
+  # Add theme layers ####
   for (ii in 1:nrow(theme_tbl)) {
     name <- glue("{theme_tbl$theme[ii]} HM")
-    if (terra::minmax(heatm[[ii]])[2] == 0) {
+    if (terra::minmax(heatm_lst[[ii]])[2] == 0) {
       map <- map |>
-        addRasterImage(heatm[[ii]],
-                       colors = pal.hm[1],
-                       opacity = 0.8,
-                       group = name) |>
+        addRasterImage(
+          heatm_lst[[ii]],
+          colors = pal.hm[1],
+          opacity = 0.8,
+          group = name,
+          options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
+        ) |>
         addLegend(
           "topright",
-          pal = colorNumeric(pal.hm[1], domain = NULL),
+          pal = colorNumeric(pal.hm[1], na.color = NA, domain = NULL),
           values = terra::values(heatm[[ii]]),
           title = name,
           group = name
         )
     } else {
       map <- map |>
-        addRasterImage(heatm[[ii]],
-                       colors = pal.hm,
-                       opacity = 0.8,
-                       group = name) |>
+        addRasterImage(
+          heatm_lst[[ii]],
+          colors = pal.hm,
+          opacity = 0.8,
+          group = name,
+          options = tileOptions(zIndex = 1000)
+        ) |>
         addLegend(
           "topright",
-          pal = colorNumeric(pal.hm, domain = NULL),
-          values = terra::values(heatm[[ii]]),
+          pal = colorNumeric(pal.hm, na.color = NA, domain = NULL),
+          values = terra::values(heatm_lst[[ii]]),
           title = name,
           group = name
         )
     }
   }
   
-  # Add protected areas layer
+  # Add protected areas layer ####
   map <- map |>
     addRasterImage(
       PA,
       colors = "#005a32",
       opacity = 0.8,
-      group = ELSA_text |> filter(var == "protected_areas") |> pull(language)
+      group = ELSA_text |> filter(var == "protected_areas") |> pull(language),
+      options = tileOptions(zIndex = 1000)
     ) |>
     addLegend(
       "topright",
@@ -147,14 +160,15 @@ fun_leaflet_elsa_1 <- function(feat_temp = NULL,
       group = ELSA_text |> filter(var == "protected_areas") |> pull(language)
     )
   
-  # Add restoration areas layer if applicable
+  # Add restoration areas layer if applicable ####
   if (restorelock) {
     map <- map |>
       addRasterImage(
         Rest,
         colors = "#fcae16",
         opacity = 0.8,
-        group = ELSA_text |> filter(var == "restore_areas") |> pull(language)
+        group = ELSA_text |> filter(var == "restore_areas") |> pull(language),
+        options = tileOptions(zIndex = 1000)
       ) |>
       addLegend(
         "topright",
@@ -164,15 +178,30 @@ fun_leaflet_elsa_1 <- function(feat_temp = NULL,
       )
   }
   
-  # Add layers control
-  overlay_groups <- c(
-    glue(
-      "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
-    ),
-    "ELSA HM",
-    glue("{theme_tbl$theme} HM"),
-    ELSA_text |> filter(var == "protected_areas") |> pull(language)
-  )
+  # Add layers control ####
+  overlay_groups <- if (multi_theme) {
+    c(
+      glue(
+        "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
+      ),
+      glue(
+        "{theme_tbl$theme} {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
+      ),
+      "ELSA HM",
+      glue("{theme_tbl$theme} HM"),
+      ELSA_text |> filter(var == "protected_areas") |> pull(language)
+    )
+  } else if (!multi_theme) {
+    c(
+      glue(
+        "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
+      ),
+      "ELSA HM",
+      glue("{theme_tbl$theme} HM"),
+      ELSA_text |> filter(var == "protected_areas") |> pull(language)
+    )
+  }
+  
   if (restorelock) {
     overlay_groups <- c(overlay_groups,
                         ELSA_text |> filter(var == "restore_areas") |> pull(language))
@@ -186,6 +215,7 @@ fun_leaflet_elsa_1 <- function(feat_temp = NULL,
       position = "topleft"
     ) |>
     hideGroup(c(
+      overlay_groups[-1],
       "ELSA HM",
       glue("{theme_tbl$theme} HM"),
       ELSA_text |> filter(var == "protected_areas") |> pull(language)

@@ -61,32 +61,6 @@ ui <- dashboardPage(
       )
     ),
     
-    # # Authentication Module - If required
-    # auth_ui(
-    #   id = "auth",
-    #   # add image on top ?
-    #   tags_top = tags$div(tags$h4(ELSA_text %>%
-    #     filter(var == "subtitle") %>%
-    #     pull(language),
-    #   style = "align:center"
-    #   )),
-    #   # add information on bottom ?
-    #   tags_bottom = tags$div(
-    #     tags$p(
-    #       ELSA_text %>%
-    #         filter(var == "questions") %>%
-    #         pull(language),
-    #       tags$a(
-    #         href = "mailto:support@unbiodiversitylab.org?Subject=ELSA too",
-    #         target = "_top",
-    #         "UNBL Support"
-    #       )
-    #     )
-    #   ),
-    #   # Set language in Login
-    #   lan = use_language(language)
-    # ),
-    
     # Boxes need to be put in a row (or column)
     fluidRow(column(
       width = 3,
@@ -167,18 +141,6 @@ ui <- dashboardPage(
           max = 100,
           step = 0.1
         ),
-        if (urb_green) {
-          numericInput(
-            "zone_4_target",
-            ELSA_text %>%
-              filter(var == "tar_green") %>%
-              pull(language),
-            green_budget,
-            min = 0,
-            max = 100,
-            step = 0.1
-          )
-        },
         tags$hr(),
         helpText(HTML(
           ELSA_text %>%
@@ -219,7 +181,7 @@ ui <- dashboardPage(
           ELSA_text %>%
             filter(var == "tab_input") %>%
             pull(language),
-          tmapOutput("InMap", height = 700)
+          leafletOutput("InMap", height = 700)
         ),
         tabPanel(
           ELSA_text %>%
@@ -238,6 +200,8 @@ ui <- dashboardPage(
             %>% pull(language)
           )),
           DT::dataTableOutput("summary"),
+          helpText(HTML("<br>")),
+          shiny::plotOutput("gg_repStacked", width = "100%"), 
           helpText(HTML("<br>")),
           helpText(HTML(
             "<h4>",
@@ -259,12 +223,6 @@ ui <- dashboardPage(
             "</h4>"
           )),
           downloadButton(
-            "download_ssoln_csv",
-            label = glue(
-              "{ELSA_text %>% filter(var == 'd_load') %>% pull(language)} {ELSA_text %>%  filter(var == 'summary') %>% pull(language)} (CSV)"
-            )
-          ),
-          downloadButton(
             "download_ssoln_xlsx",
             label = glue(
               "{ELSA_text %>% filter(var == 'd_load') %>% pull(language)} {ELSA_text %>%  filter(var == 'summary') %>% pull(language)} (Excel)"
@@ -282,7 +240,7 @@ ui <- dashboardPage(
           ELSA_text
           %>% filter(var == "tab_map") %>%
             pull(language),
-          tmapOutput("cadMap", height = 700)
+          leafletOutput("cadMap", height = 700)
         )
       )
     ))

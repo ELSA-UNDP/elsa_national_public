@@ -6,76 +6,50 @@ ELSA_text <- readr::read_rds(here::here(".", "elsa_text.rds"))
 
 language <- language
 country <- country # "Ecuador"
-urb_green <- urb_green
 restorelock <- restorelock
 
 `%nin%` <- Negate(`%in%`)
 
 if (restorelock & palock) {
-  prot_lst <- list("locked",
-                   "avail",
-                   "restore",
-                   "pa_restore")
+  prot_lst <- list("locked", "avail", "restore", "pa_restore")
   
   names(prot_lst) <- c(
-    ELSA_text %>%
-      filter(var == "prot_txt") %>%
-      pull(language),
-    ELSA_text %>%
-      filter(var == "nolock_txt") %>%
-      pull(language),
-    ELSA_text %>%
-      filter(var == "restlock_txt") %>%
-      pull(language),
-    ELSA_text %>%
-      filter(var == "prot_rest_txt") %>%
-      pull(language)
+    ELSA_text |> filter(var == "prot_txt") |> pull(language),
+    ELSA_text |> filter(var == "nolock_txt")  |> pull(language),
+    ELSA_text |> filter(var == "restlock_txt") |> pull(language),
+    ELSA_text |> filter(var == "prot_rest_txt") |> pull(language)
   )
 } else {
   if (restorelock) {
-    prot_lst <- list("locked",
-                     "avail",
-                     "restore")
+    prot_lst <- list("locked", "avail", "restore")
     
     names(prot_lst) <- c(
-      ELSA_text %>%
-        filter(var == "prot_txt") %>%
-        pull(language),
-      ELSA_text %>%
-        filter(var == "nolock_txt") %>%
-        pull(language),
-      ELSA_text %>%
-        filter(var == "restlock_txt") %>%
-        pull(language)
+      ELSA_text |> filter(var == "prot_txt") |> pull(language),
+      ELSA_text |> filter(var == "nolock_txt") |> pull(language),
+      ELSA_text |> filter(var == "restlock_txt") |> pull(language)
     )
   }
   else {
-    prot_lst <- list("locked",
-                     "avail")
+    prot_lst <- list("locked", "avail")
     
     names(prot_lst) <- c(
-      ELSA_text %>%
-        filter(var == "prot_txt") %>%
-        pull(language),
-      ELSA_text %>%
-        filter(var == "nolock_txt") %>%
-        pull(language)
+      ELSA_text |> filter(var == "prot_txt") |> pull(language),
+      ELSA_text |> filter(var == "nolock_txt") |> pull(language)
     )
   }
 }
 
 area_lst <- list("area")
 
-names(area_lst) <- ELSA_text %>%
-  dplyr::filter(var == "area") %>%
+names(area_lst) <- ELSA_text |>
+  dplyr::filter(var == "area")  |>
   dplyr::pull(language)
 
 #### Colour Palettes
-if (urb_green) {
-  pal.elsa <- c("#4daf4a", "#984ea3", "#377eb8", "#e41a1c")
-} else {
-  pal.elsa <- c("#4daf4a", "#984ea3", "#377eb8")
-}
+pal.elsa <- tibble(
+  colour = c("#4daf4a", "#984ea3", "#377eb8"),
+  category = c("Protect", "Restore", "Manage")
+)
 pal.hm <- c("#440154", "#3B528B", "#21908C", "#5DC863", "#FDE725")
 pal.in <- c("#0D0887", "#7E03A8", "#CC4678", "#F89441", "#F0F921")
 pal.zone <- "#6afdfa"
@@ -91,40 +65,34 @@ man_zone <-
   terra::rast(here::here("data/elsa_inputs", zones_df$file_name[2]))
 rest_zone <-
   terra::rast(here::here("data/elsa_inputs", zones_df$file_name[3]))
-if (urb_green) {
-  green_zone <-
-    terra::rast(here::here("data/elsa_inputs", zones_df$file_name[4]))
-}
 
-if (urb_green) {
-  zn1 <- terra::rast(zn1)
-  zn2 <- terra::rast(zn2)
-  zn3 <- terra::rast(zn3)
-  zn4 <- terra::rast(zn4)
-} else {
-  zn1 <- terra::rast(zn1)
-  zn2 <- terra::rast(zn2)
-  zn3 <- terra::rast(zn3)
-}
+zn1 <- terra::rast(zn1)
+zn2 <- terra::rast(zn2)
+zn3 <- terra::rast(zn3)
 
 ### Create Zone file
-if (urb_green) {
-  zns <- prioritizr::zones(
-    "Protect" = zn1,
-    "Restore" = zn2,
-    "Manage" = zn3,
-    "Green" = zn4,
-    feature_names = names(zn1)
-  )
-} else {
-  zns <- prioritizr::zones(
-    "Protect" = zn1,
-    "Restore" = zn2,
-    "Manage" = zn3,
-    feature_names = names(zn1)
-  )
-}
+zns <- prioritizr::zones(
+  "Protect" = zn1,
+  "Restore" = zn2,
+  "Manage" = zn3,
+  feature_names = names(zn1)
+)
 
+### Create data frame for representation calculations
+feat_stack_raw <- terra::rast(feat_stack_raw)  
+# Calculate the sum of each layer
+layer_sums <- terra::global(feat_stack_raw, sum, na.rm = TRUE)
+# Extract the names of each layer
+layer_names <- terra::names(feat_stack_raw)
+
+# Create a data frame with layer names and their corresponding sums
+overall_raw_df <- data.frame(
+  feature = layer_names,
+  total_amount = layer_sums[, 1] # First column of the global output
+)
+
+rm(layer_sums, layer_names)
+  
 PA <- terra::rast(PA)
 if (restorelock) {
   Rest <- terra::rast(Rest)
@@ -151,11 +119,9 @@ if (restorelock & palock) {
   ))
 } else {
   if (!restorelock) {
-    pu_all <- list(area = list(locked = pu1_pa,
-                               avail = pu1))
+    pu_all <- list(area = list(locked = pu1_pa, avail = pu1))
   } else {
-    pu_all <- list(area = list(locked = pu1_pa,
-                               avail = pu1))
+    pu_all <- list(area = list(locked = pu1_pa, avail = pu1))
   }
 }
 
@@ -173,12 +139,4 @@ theme_tbl <- tibble(
   theme = themes,
   names = theme_names,
   layers = theme_layers
-)
-
-# # Define user credentials
-# credentials <- tibble::tibble(
-#   user = c("ELSA", "scott"), # mandatory
-#   password = c("123456", "elsa"), # mandatory
-#   admin = c(FALSE, TRUE),
-#   comment = "Simple and secure authentification mechanism for single 'Shiny' applications."
-# )
+  )
