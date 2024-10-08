@@ -170,18 +170,18 @@ server <- function(input, output, session) {
       DF[, c("name", "theme", "weight", "policy", "feature")],
       readOnly = TRUE,
       colHeaders = c(
-        ELSA_text  |>
-          dplyr::filter(var %in% c("data", "theme", "weight", "policy"))  |>
-          dplyr::slice(1, 3, 4, 2) |>
+        ELSA_text  %>%
+          dplyr::filter(var %in% c("data", "theme", "weight", "policy"))  %>%
+          dplyr::slice(1, 3, 4, 2) %>%
           dplyr::pull(language),
         "feature"
       )
-    )  |>
-      hot_table(highlightCol = TRUE, highlightRow = TRUE) |>
-      hot_col(ELSA_text |>
-                filter(var %in% c("weight")) |>
-                pull(language), readOnly = FALSE) |>
-      hot_col(col = "feature", colWidths = 0.1)  |> # Small width hides column
+    )  %>%
+      hot_table(highlightCol = TRUE, highlightRow = TRUE) %>%
+      hot_col(ELSA_text %>%
+                filter(var %in% c("weight")) %>%
+                pull(language), readOnly = FALSE) %>%
+      hot_col(col = "feature", colWidths = 0.1)  %>% # Small width hides column
       hot_context_menu(allowRowEdit = FALSE, allowColEdit = FALSE)
   })
   
@@ -205,22 +205,22 @@ server <- function(input, output, session) {
       progress <- Progress$new(session)
       
       progress$set(
-        message = ELSA_text |> dplyr::filter(var == "setup") |> dplyr::pull(language),
-        detail = ELSA_text |> dplyr::filter(var == "be_patient") |> dplyr::pull(language),
+        message = ELSA_text %>% dplyr::filter(var == "setup") %>% dplyr::pull(language),
+        detail = ELSA_text %>% dplyr::filter(var == "be_patient") %>% dplyr::pull(language),
         value = 0.01
       )
       
       pu_temp <- pu_all[["area"]][[input$protected]]
       
       prob.ta <-
-        prioritizr::problem(pu_temp, zns, run_checks = FALSE) |>
+        prioritizr::problem(pu_temp, zns, run_checks = FALSE) %>%
         prioritizr::add_default_solver(gap = 0.05, threads = 4) #add_gurobi_solver(gap = 0.05, threads = 8)
       
       
       if (input$protected == "avail") {
         target <- get_min_lockin_target(c(PA0, PA0, PA0), input, pu)
         
-        prob.ta <- prob.ta |>
+        prob.ta <- prob.ta %>%
           prioritizr::add_max_utility_objective(c(
             count_tar(pu0, target[1]),
             count_tar(pu0, target[2]),
@@ -231,64 +231,64 @@ server <- function(input, output, session) {
       if (input$protected == "locked") {
         target <- get_min_lockin_target(c(PA, PA0, PA0), input, pu)
         
-        prob.ta <- prob.ta |>
+        prob.ta <- prob.ta %>%
           prioritizr::add_max_utility_objective(c(
             count_tar(pu0, target[1]),
             count_tar(pu0, target[2]),
             count_tar(pu0, target[3])
-          )) |>
+          )) %>%
           prioritizr::add_locked_in_constraints(c(PA, PA0, PA0))
       }
       
       if (input$protected == "restore") {
         target <- get_min_lockin_target(c(PA0, Rest, PA0), input, pu)
         
-        prob.ta <- prob.ta |>
+        prob.ta <- prob.ta %>%
           prioritizr::add_max_utility_objective(c(
             count_tar(pu0, target[1]),
             count_tar(pu0, target[2]),
             count_tar(pu0, target[3])
-          )) |>
+          )) %>%
           prioritizr::add_locked_in_constraints(c(PA0, Rest, PA0))
       }
       
       if (input$protected == "pa_restore") {
         target <- get_min_lockin_target(c(PA, Rest, PA0), input, pu)
         
-        prob.ta <- prob.ta |>
+        prob.ta <- prob.ta %>%
           prioritizr::add_max_utility_objective(c(
             count_tar(pu0, target[1]),
             count_tar(pu0, target[2]),
             count_tar(pu0, target[3])
-          )) |>
+          )) %>%
           prioritizr::add_locked_in_constraints(c(PA, Rest, PA0))
       }
       
       #### Boundary Penalty Factor ####
       if (input$blm > 0) {
-        prob.ta <- prob.ta |>
+        prob.ta <- prob.ta %>%
           prioritizr::add_boundary_penalties(penalty = input$blm / 10000)
       }
       
       if (input$multipri == TRUE) {
         progress$set(
-          message = ELSA_text |> dplyr::filter(var == "calc") |>  dplyr::pull(language),
+          message = ELSA_text %>% dplyr::filter(var == "calc") %>%  dplyr::pull(language),
           detail = paste(
-            ELSA_text  |> dplyr::filter(var == "calc")  |> dplyr::pull(language),
+            ELSA_text  %>% dplyr::filter(var == "calc")  %>% dplyr::pull(language),
             sprintf("1/%s", (1 + nrow(theme_tbl)))
           ),
           value = round(1 / (2 + nrow(theme_tbl)), 1)
         )
       } else {
         progress$set(
-          message = ELSA_text |> dplyr::filter(var == "calc") |>  dplyr::pull(language),
-          detail = ELSA_text |> dplyr::filter(var == "run") |>  dplyr::pull(language),
+          message = ELSA_text %>% dplyr::filter(var == "calc") %>%  dplyr::pull(language),
+          detail = ELSA_text %>% dplyr::filter(var == "run") %>%  dplyr::pull(language),
           value = 0.5
         )
       }
       
       #### Add weights to conservation problem ####
-      prob.all <- prob.ta |>
+      prob.all <- prob.ta %>%
         prioritizr::add_feature_weights(as.matrix(matrix(
           rep(weights.temp$weight, 3),
           ncol = 3,
@@ -304,41 +304,42 @@ server <- function(input, output, session) {
       #### Get feature representation ####
       
       # First get overall info from prioritizr
-      overall_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result) |>
-        dplyr::rename(zone = summary) |> 
-        filter(zone == "overall") |> 
-        dplyr::select("feature", "absolute_held") |> 
-        dplyr::left_join(overall_raw_df, by = "feature") |> 
-        dplyr::mutate(relative_held_overall = absolute_held / total_amount)
+      overall_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result) %>%
+        dplyr::rename(zone = summary) %>% 
+        filter(zone == "overall") %>% 
+        dplyr::select("feature", "absolute_held") %>% 
+        dplyr::left_join(overall_raw_df, by = "feature") %>% #overall_raw_df has total possible without impact values
+        dplyr::mutate(relative_held_overall = absolute_held / total_amount) #divide by total possible without impacts included to reflect impacts in representation
       
       # Calculate relative values for each zone and pivot them into new columns
-      relative_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result)  |> 
-        dplyr::rename(zone = summary)  |>
-        filter(zone != "overall")  |>
-        dplyr::select("feature", "absolute_held", "zone")  |>
-        dplyr::left_join(overall_raw_df, by = "feature")  |>
-        dplyr::mutate(relative_held_zone = absolute_held / total_amount)  |>
-        dplyr::select("zone", "feature", "relative_held_zone")  |>
+      relative_rep <- prioritizr::eval_feature_representation_summary(prob.all, elsa_result)  %>% 
+        dplyr::rename(zone = summary)  %>%
+        filter(zone != "overall")  %>%
+        dplyr::select("feature", "absolute_held", "zone")  %>%
+        dplyr::left_join(overall_raw_df, by = "feature")  %>%
+        dplyr::mutate(relative_held_zone = absolute_held / total_amount)  %>%
+        dplyr::select("zone", "feature", "relative_held_zone")  %>%
         tidyr::pivot_wider(names_from = zone, values_from = relative_held_zone)
       
       # Combine the overall totals with the relative values
-      feat_rep <- overall_rep  |>
-        dplyr::select("feature", "relative_held_overall")  |>
-        dplyr::left_join(relative_rep, by = "feature")  |>
+      feat_rep <- overall_rep  %>%
+        dplyr::select("feature", "relative_held_overall")  %>%
+        dplyr::left_join(relative_rep, by = "feature")  %>%
         dplyr::rename(
-          "{ELSA_text |>  filter(var == 'protect')  |>  pull(language)}" := Protect,
-          "{ELSA_text |>  filter(var == 'restore') |>  pull(language)}" := Restore,
-          "{ELSA_text |>  filter(var == 'manage')  |>  pull(language)}" := Manage
+          "{ELSA_text %>%  filter(var == 'protect')  %>%  pull(language)}" := Protect,
+          "{ELSA_text %>%  filter(var == 'restore') %>%  pull(language)}" := Restore,
+          "{ELSA_text %>%  filter(var == 'manage')  %>%  pull(language)}" := Manage
         )
       
+      # Get results based on multiple themes (biodiversity, climate change mitigation, human well-being)
       elsa_result_multi <- feat_rep.lst <- list()
       
       if (input$multipri == TRUE) {
         for (ii in 1:nrow(theme_tbl)) {
           progress$set(
-            message = ELSA_text |>  dplyr::filter(var == "calc")  |>  dplyr::pull(language),
+            message = ELSA_text %>%  dplyr::filter(var == "calc")  %>%  dplyr::pull(language),
             detail = paste(
-              ELSA_text |>  dplyr::filter(var == "calc") |>  dplyr::pull(language),
+              ELSA_text %>%  dplyr::filter(var == "calc") %>%  dplyr::pull(language),
               sprintf("%s/%s", 1 + ii, (1 + nrow(
                 theme_tbl
               )))
@@ -352,7 +353,7 @@ server <- function(input, output, session) {
           
           wgt.tmp$weight[names(feat_stack) %nin% theme_tbl$names[[ii]]] <- 0
           
-          prob.tmp <- prob.ta |>
+          prob.tmp <- prob.ta %>%
             prioritizr::add_feature_weights(as.matrix(matrix(
               rep(wgt.tmp$weight, 3),
               ncol = 3,
@@ -367,31 +368,31 @@ server <- function(input, output, session) {
                            make_elsa_categorical_raster(elsa_result_multi[[ii]]))
           
           # First get overall info from prioritizr
-          overall_rep <- prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]])  |>
-            dplyr::rename(zone = summary)  |>
-            filter(zone == "overall")  |>
-            dplyr::select("feature", "absolute_held")  |>
-            dplyr::left_join(overall_raw_df, by = "feature")  |>
+          overall_rep <- prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]])  %>%
+            dplyr::rename(zone = summary)  %>%
+            filter(zone == "overall")  %>%
+            dplyr::select("feature", "absolute_held")  %>%
+            dplyr::left_join(overall_raw_df, by = "feature")  %>%
             dplyr::mutate(relative_held_overall = absolute_held / total_amount)
           
           # Calculate relative values for each zone and pivot them into new columns
-          relative_rep <- prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]])  |>
-            dplyr::rename(zone = summary)  |>
-            filter(zone != "overall")  |>
-            dplyr::select("feature", "absolute_held", "zone")  |>
-            dplyr::left_join(overall_raw_df, by = "feature")  |>
-            dplyr::mutate(relative_held_zone = absolute_held / total_amount)  |>
-            dplyr::select("zone", "feature", "relative_held_zone")  |>
+          relative_rep <- prioritizr::eval_feature_representation_summary(prob.tmp, elsa_result_multi[[ii]])  %>%
+            dplyr::rename(zone = summary)  %>%
+            filter(zone != "overall")  %>%
+            dplyr::select("feature", "absolute_held", "zone")  %>%
+            dplyr::left_join(overall_raw_df, by = "feature")  %>%
+            dplyr::mutate(relative_held_zone = absolute_held / total_amount)  %>%
+            dplyr::select("zone", "feature", "relative_held_zone")  %>%
             tidyr::pivot_wider(names_from = zone, values_from = relative_held_zone)
           
           # Combine the overall totals with the relative values
-          feat_rep.lst[[ii]] <- overall_rep  |>
-            dplyr::select("feature", "relative_held_overall")  |>
-            dplyr::left_join(relative_rep, by = "feature")  |>
+          feat_rep.lst[[ii]] <- overall_rep  %>%
+            dplyr::select("feature", "relative_held_overall")  %>%
+            dplyr::left_join(relative_rep, by = "feature")  %>%
             dplyr::rename(
-              "{ELSA_text |>  filter(var == 'protect')  |>  pull(language)}" := Protect,
-              "{ELSA_text |>  filter(var == 'restore') |>  pull(language)}" := Restore,
-              "{ELSA_text |>  filter(var == 'manage')  |>  pull(language)}" := Manage
+              "{ELSA_text %>%  filter(var == 'protect')  %>%  pull(language)}" := Protect,
+              "{ELSA_text %>%  filter(var == 'restore') %>%  pull(language)}" := Restore,
+              "{ELSA_text %>%  filter(var == 'manage')  %>%  pull(language)}" := Manage
             )
 
           rm(wgt.tmp, prob.tmp)
@@ -400,8 +401,8 @@ server <- function(input, output, session) {
 
       #### Calculate representation summaries ####
       progress$set(
-        message = ELSA_text |> dplyr::filter(var == "post") |> dplyr::pull(language),
-        detail = ELSA_text |> dplyr::filter(var == "post_help") |> dplyr::pull(language),
+        message = ELSA_text %>% dplyr::filter(var == "post") %>% dplyr::pull(language),
+        detail = ELSA_text %>% dplyr::filter(var == "post_help") %>% dplyr::pull(language),
         value = 0.9
       )
 
@@ -411,32 +412,32 @@ server <- function(input, output, session) {
           colnames(df)[2] <- themes[[i]]
           # Join the data frames
           dplyr::left_join(x, df, by = setNames(names(x)[1], names(df)[1]))
-        }, .init = feat_rep[, c(1, 2)])  |>
+        }, .init = feat_rep[, c(1, 2)])  %>%
           tibble::add_column(
             Name = feat_df$label,
             Theme = feat_df$theme,
             .before = 1
-          ) |>
-          dplyr::rename(ELSA = "relative_held_overall") |>
-          dplyr::select(-"feature") |>
-          dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) |>
-          dplyr::rowwise() |>
-          dplyr::mutate(elsa_tradeoff = round(ELSA / max(c_across(4:6)) * 100, 1)) |>
+          ) %>%
+          dplyr::rename(ELSA = "relative_held_overall") %>%
+          dplyr::select(-"feature") %>%
+          dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) %>%
+          dplyr::rowwise() %>%
+          dplyr::mutate(elsa_tradeoff = round(ELSA / max(c_across(4:6)) * 100, 1)) %>%
           dplyr::rename(
-            "{ELSA_text  |> filter(var == 'elsa_tradeoff')  |> pull(language)}" := elsa_tradeoff
+            "{ELSA_text  %>% filter(var == 'elsa_tradeoff')  %>% pull(language)}" := elsa_tradeoff
           )
       } 
       
-      feature_rep_tabl <- feat_rep  |>
-        dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1)))  |>
-        dplyr::select(2:5)  |>
+      feature_rep_tabl <- feat_rep  %>%
+        dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1)))  %>%
+        dplyr::select(2:5)  %>%
         tibble::add_column(Name = feat_df$label,
                            Theme = feat_df$theme,
-                           .before = 1) |>
+                           .before = 1) %>%
         dplyr::rename(
-          "{ELSA_text  |> filter(var == 'data') |> pull(language)}" := Name,
-          "{ELSA_text |> filter(var == 'theme')  |> pull(language)}" := Theme,
-          "{ELSA_text |> filter(var == 'overall')  |> pull(language)}" := relative_held_overall
+          "{ELSA_text  %>% filter(var == 'data') %>% pull(language)}" := Name,
+          "{ELSA_text %>% filter(var == 'theme')  %>% pull(language)}" := Theme,
+          "{ELSA_text %>% filter(var == 'overall')  %>% pull(language)}" := relative_held_overall
         )
       
     
@@ -467,8 +468,8 @@ server <- function(input, output, session) {
     progress <- Progress$new(session)
     
     progress$set(
-      message = ELSA_text |> filter(var == "gen_map") |> pull(language),
-      detail = ELSA_text |> filter(var == "be_patient") |> pull(language),
+      message = ELSA_text %>% filter(var == "gen_map") %>% pull(language),
+      detail = ELSA_text %>% filter(var == "be_patient") %>% pull(language),
       value = 0.5
     )
     
@@ -487,8 +488,8 @@ server <- function(input, output, session) {
       progress <- Progress$new(session)
       
       progress$set(
-        message = ELSA_text |> filter(var == "gen_map") |> pull(language),
-        detail = ELSA_text |> filter(var == "be_patient") |> pull(language),
+        message = ELSA_text %>% filter(var == "gen_map") %>% pull(language),
+        detail = ELSA_text %>% filter(var == "be_patient") %>% pull(language),
         value = 0.5
       )
       
@@ -528,8 +529,8 @@ server <- function(input, output, session) {
     } else {
       progress <- Progress$new(session)
       progress$set(
-        message = ELSA_text |> dplyr::filter(var == "gen_map") |> dplyr::pull(language),
-        detail = ELSA_text |> dplyr::filter(var == "be_patient") |> dplyr::pull(language),
+        message = ELSA_text %>% dplyr::filter(var == "gen_map") %>% dplyr::pull(language),
+        detail = ELSA_text %>% dplyr::filter(var == "be_patient") %>% dplyr::pull(language),
         value = 0.5
       )
       
@@ -604,15 +605,15 @@ server <- function(input, output, session) {
       on.exit(setwd(owd))
       
       #### Delete geotifs before prepping new tifs ####
-      list.files(pattern = "*\\.(tif|xml)$")  |>
+      list.files(pattern = "*\\.(tif|xml)$")  %>%
         file.remove()
       
       files <- NULL
       
       progress <- Progress$new(session)
       progress$set(
-        message = ELSA_text |> dplyr::filter(var == "prep_raster") |> dplyr::pull(language),
-        detail = ELSA_text |> dplyr::filter(var == "be_patient") |> dplyr::pull(language),
+        message = ELSA_text %>% dplyr::filter(var == "prep_raster") %>% dplyr::pull(language),
+        detail = ELSA_text %>% dplyr::filter(var == "be_patient") %>% dplyr::pull(language),
         value = 0.5
       )
       
@@ -624,9 +625,9 @@ server <- function(input, output, session) {
         
         activeCat(elsa_raster) <- 3 # Set active category to the action label in the language used
         
-        names(elsa_raster) <- glue("ELSA {ELSA_text  |> filter(var == 'action')  |> pull(language)}")
+        names(elsa_raster) <- glue("ELSA {ELSA_text  %>% filter(var == 'action')  %>% pull(language)}")
         
-        elsa_raster  |>
+        elsa_raster  %>%
           terra::writeRaster(
             glue::glue("ELSA_{Sys.Date()}.tif"),
             gdal = c(
@@ -649,7 +650,7 @@ server <- function(input, output, session) {
         
         layer_names <- c("ELSA", theme_tbl$theme)
         
-        elsa_raster |>
+        elsa_raster %>%
           terra::writeRaster(
             c(glue::glue("{layer_names[1]}_{Sys.Date()}.tif"),
               glue::glue("ELSA_{gsub(' ', '_', layer_names[-1])}_{Sys.Date()}.tif")),
@@ -678,8 +679,8 @@ server <- function(input, output, session) {
       
       names(elsa_hm) <- "ELSA heatmap"
       
-      elsa_hm  |>
-        terra::classify(cbind(NA, -9999))  |>
+      elsa_hm  %>%
+        terra::classify(cbind(NA, -9999))  %>%
         terra::writeRaster(
           glue::glue("ELSA_HM_{Sys.Date()}.tif"),
           gdal = c(
@@ -715,10 +716,10 @@ server <- function(input, output, session) {
         names(theme_hm[[ii]]) <-
           glue::glue("{theme_tbl$theme[ii]} heatmap")
         
-        theme_hm[[ii]]  |>
-          terra::classify(cbind(NA, -9999))  |>
+        theme_hm[[ii]]  %>%
+          terra::classify(cbind(NA, -9999))  %>%
           terra::writeRaster(
-            glue::glue("{theme_tbl$theme[ii]}_HM_{Sys.Date()}.tif")  |> gsub("/", "-", .)  |> gsub(" ", "_", .),
+            glue::glue("{theme_tbl$theme[ii]}_HM_{Sys.Date()}.tif")  %>% gsub("/", "-", .)  %>% gsub(" ", "_", .),
             gdal = c(
               "COMPRESS=DEFLATE",
               "NUM_THREADS=ALL_CPUS",
@@ -744,6 +745,7 @@ server <- function(input, output, session) {
     }
   )
   
+  # Downloads ####
   output$download_ssoln_xlsx <- downloadHandler(
     filename = function() {
       glue::glue("ELSA_summary_results_{Sys.Date()}.xlsx")
@@ -771,7 +773,7 @@ server <- function(input, output, session) {
         names_to = "Parameter",
         values_to = "Value",
         values_transform = list(Value = as.character)
-      )  |>
+      )  %>%
         readr::write_csv(file, col_names = TRUE)
     }
   )

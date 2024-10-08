@@ -1,4 +1,4 @@
-# R script to pre-process all the data and parameters needed to set up the ELSA tool #### 
+# R script to pre-process all the data and parameters needed to set up the ELSA tool ####
 
 purrr::walk(
   list.files(
@@ -297,7 +297,7 @@ zns <- prioritizr::zones(
 ################################################################################
 if (weight_cal) {
   # Planning unit information with cost information per zone (area based, so 1 where selection is possible for a zone, 0 where selection isnt possible)
-  pu_temp <- pu_all[["area"]][["locked"]] 
+  pu_temp <- pu_all[["area"]][["locked"]]
 
   # Initial prioritizr problem formulation
   prob.ta <- prioritizr::problem(pu_temp, zns) %>%
@@ -311,16 +311,17 @@ if (weight_cal) {
 
   # Solve conservatioon problem
   s.ta <- solve(prob.ta, force = TRUE)
-  
+
   # Get feature representation
   freq <-
     prioritizr::eval_feature_representation_summary(prob.ta, s.ta)
 
-  
+
   rep <- rep0 <- tidyr::pivot_wider(freq,
-                                    id_cols = feature,
-                                    names_from = summary,
-                                    values_from = relative_held) |>
+    id_cols = feature,
+    names_from = summary,
+    values_from = relative_held
+  ) %>%
     dplyr::select(-c(overall))
 
   rep[, -1] <- 0
@@ -336,10 +337,10 @@ if (weight_cal) {
 
   for (ii in 1:terra::nlyr(feat_stack)) {
     wgt2 <- wgt
-    
+
     wgt2[ii, ] <- 1
-    
-    prob.all <- prob.ta |>
+
+    prob.all <- prob.ta %>%
       prioritizr::add_feature_weights(wgt2)
 
     result <- solve(prob.all, force = TRUE)
@@ -352,17 +353,17 @@ if (weight_cal) {
       id_cols = feature,
       names_from = summary,
       values_from = relative_held
-    ) |>
+    ) %>%
       dplyr::select(-c(overall))
-    
+
     rep[ii, ] <- tar[ii, ]
-    
+
     rm(prob.all, result, feat_rep, tar)
     gc()
   }
 
   rep[is.na(rep)] <- 0
-  
+
   gc()
 
   # all groups
@@ -388,7 +389,7 @@ if (weight_cal) {
     id_cols = feature,
     names_from = summary,
     values_from = relative_held
-  ) |>
+  ) %>%
     dplyr::select(-c(overall))
 
   tar[is.na(tar)] <- 0
@@ -397,7 +398,7 @@ if (weight_cal) {
     feature = rep$feature,
     max_representation = rowSums(rep[, -1], na.rm = T),
     max_utility = rowSums(tar[, -1], na.rm = T)
-  ) |>
+  ) %>%
     dplyr::mutate(
       delta_mu = max_utility - max_representation,
       delta_mu_perc = (max_utility - max_representation) / max_representation * 100
@@ -415,11 +416,11 @@ if (weight_cal) {
     adj <-
       wgt_scale - (dd$delta_mu_perc - min(dd$delta_mu_perc)) / (max(dd$delta_mu_perc) - min(dd$delta_mu_perc)) * wgt_scale
     wgtb <- wgta + adj
-    
+
     print(it)
     flush.console()
-    
-    p1 <- prob.ta |>
+
+    p1 <- prob.ta %>%
       prioritizr::add_feature_weights(wgtb)
 
     s1 <- solve(p1, force = TRUE)
@@ -441,14 +442,14 @@ if (weight_cal) {
       feature = rep$feature,
       max_representation = rowSums(rep[, -1], na.rm = T),
       max_utility = rowSums(t1[, -1], na.rm = T)
-    ) |>
+    ) %>%
       mutate(
         delta_mu = max_utility - max_representation,
         delta_mu_perc = (max_utility - max_representation) / max_representation * 100
       )
 
     dd1
-    
+
     summary(dd1$delta_mu_perc)
 
     tt <- tibble::tibble(
@@ -499,8 +500,9 @@ wgts <- tibble::tibble(
   theme = feat_df$theme,
   feature = names(feat_stack),
   weight = ifelse(is.na(feat_df$weight_final),
-                  5,
-                  as.numeric(feat_df$weight_final)),
+    5,
+    as.numeric(feat_df$weight_final)
+  ),
   policy = feat_df$policy_num
 ) # Policy Targets
 
@@ -509,7 +511,7 @@ wgts <- tibble::tibble(
 ################################################################################
 
 # Process feature theme information ####
-#(specific category for a feature, either Biodiversity, Climate Mitigation or Human Well-being)
+# (specific category for a feature, either Biodiversity, Climate Mitigation or Human Well-being)
 themes <- unique(feat_df$theme)
 theme_names <- list()
 theme_layers <- list()
@@ -520,9 +522,11 @@ for (ii in 1:length(themes)) {
   theme_layers[[ii]] <- feat_stack[[theme_names[[ii]]]]
 }
 
-theme_tbl <- tibble(theme = themes,
-                    names = theme_names,
-                    layers = theme_layers)
+theme_tbl <- tibble(
+  theme = themes,
+  names = theme_names,
+  layers = theme_layers
+)
 
 gc()
 

@@ -17,37 +17,36 @@ restorelock <- restorelock
 
 if (restorelock & palock) {
   prot_lst <- list("locked", "avail", "restore", "pa_restore")
-  
+
   names(prot_lst) <- c(
-    ELSA_text |> filter(var == "prot_txt") |> pull(language),
-    ELSA_text |> filter(var == "nolock_txt")  |> pull(language),
-    ELSA_text |> filter(var == "restlock_txt") |> pull(language),
-    ELSA_text |> filter(var == "prot_rest_txt") |> pull(language)
+    ELSA_text %>% filter(var == "prot_txt") %>% pull(language),
+    ELSA_text %>% filter(var == "nolock_txt") %>% pull(language),
+    ELSA_text %>% filter(var == "restlock_txt") %>% pull(language),
+    ELSA_text %>% filter(var == "prot_rest_txt") %>% pull(language)
   )
 } else {
   if (restorelock) {
     prot_lst <- list("locked", "avail", "restore")
-    
+
     names(prot_lst) <- c(
-      ELSA_text |> filter(var == "prot_txt") |> pull(language),
-      ELSA_text |> filter(var == "nolock_txt") |> pull(language),
-      ELSA_text |> filter(var == "restlock_txt") |> pull(language)
+      ELSA_text %>% filter(var == "prot_txt") %>% pull(language),
+      ELSA_text %>% filter(var == "nolock_txt") %>% pull(language),
+      ELSA_text %>% filter(var == "restlock_txt") %>% pull(language)
     )
-  }
-  else {
+  } else {
     prot_lst <- list("locked", "avail")
-    
+
     names(prot_lst) <- c(
-      ELSA_text |> filter(var == "prot_txt") |> pull(language),
-      ELSA_text |> filter(var == "nolock_txt") |> pull(language)
+      ELSA_text %>% filter(var == "prot_txt") %>% pull(language),
+      ELSA_text %>% filter(var == "nolock_txt") %>% pull(language)
     )
   }
 }
 
 area_lst <- list("area")
 
-names(area_lst) <- ELSA_text |>
-  dplyr::filter(var == "area")  |>
+names(area_lst) <- ELSA_text %>%
+  dplyr::filter(var == "area") %>%
   dplyr::pull(language)
 
 # Colour Palettes ####
@@ -83,8 +82,8 @@ zns <- prioritizr::zones(
   feature_names = names(zn1)
 )
 
-#Create data frame for representation calculations ####
-feat_stack_raw <- terra::rast(feat_stack_raw)  
+# Create data frame for representation calculations ####
+feat_stack_raw <- terra::rast(feat_stack_raw)
 # Calculate the sum of each layer
 layer_sums <- terra::global(feat_stack_raw, sum, na.rm = TRUE)
 # Extract the names of each layer
@@ -98,7 +97,7 @@ overall_raw_df <- data.frame(
 
 rm(layer_sums, layer_names)
 
-# Unwrap data additional data ####  
+# Unwrap data additional data ####
 PA <- terra::rast(PA)
 if (restorelock) {
   Rest <- terra::rast(Rest)
@@ -146,4 +145,4 @@ theme_tbl <- tibble(
   theme = themes,
   names = theme_names,
   layers = theme_layers
-  )
+)
