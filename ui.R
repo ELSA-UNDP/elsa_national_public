@@ -167,18 +167,6 @@ ui <- dashboardPage(
           max = 100,
           step = 0.1
         ),
-        if (urb_green) {
-          numericInput(
-            "zone_4_target",
-            ELSA_text %>%
-              filter(var == "tar_green") %>%
-              pull(language),
-            green_budget,
-            min = 0,
-            max = 100,
-            step = 0.1
-          )
-        },
         tags$hr(),
         helpText(HTML(
           ELSA_text %>%
