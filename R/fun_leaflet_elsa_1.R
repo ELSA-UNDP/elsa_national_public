@@ -13,10 +13,18 @@ fun_leaflet_elsa_1 <- function(multi_theme = NULL,
   
   # Add ELSA features ####
   if (multi_theme) {
+    theme_group <- c(
+      glue(
+        "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
+      ),
+      glue(
+        "{theme_tbl$theme} {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
+      )
+    )
     
     for (n in 1:nlyr(rast)) {
       # Get raster attributes ####
-      raster_attributes <- as_tibble(terra::cats(rast[[n]])[[1]]) |> 
+      raster_attributes <- as_tibble(terra::cats(rast[[n]])[[1]]) |>
         filter(value %in% unique(terra::values(rast[[n]])))
       
       map <- map |>
@@ -24,23 +32,21 @@ fun_leaflet_elsa_1 <- function(multi_theme = NULL,
           rast[[n]],
           colors = raster_attributes$colour,
           opacity = 0.8,
-          group = glue("ELSA {scenario_names[n]}"),
+          group = theme_group[n],
           options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
         ) |>
         addLegend(
           "topright",
-          colors = filter(raster_attributes, category != "Do_Nothing")$colour,
-          values = filter(raster_attributes, category != "Do_Nothing")$category,
-          title = glue(
-            "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
-          ),
-          labels = filter(raster_attributes, category != "Do_Nothing")$label,
-          group = glue("ELSA {scenario_names[n]}")
+          colors = raster_attributes$colour,
+          values = raster_attributes$category,
+          title = theme_group[n],
+          labels = raster_attributes$label,
+          group = theme_group[n]
         )
     }
   } else if (!multi_theme) {
     # Get raster attributes ####
-    raster_attributes <- as_tibble(terra::cats(rast)[[1]]) |> 
+    raster_attributes <- as_tibble(terra::cats(rast)[[1]]) |>
       filter(value %in% unique(terra::values(rast)))
     
     map <- map |>
@@ -55,24 +61,26 @@ fun_leaflet_elsa_1 <- function(multi_theme = NULL,
       ) |>
       addLegend(
         "topright",
-        colors = filter(raster_attributes, category != "Do_Nothing")$colour,
-        values = filter(raster_attributes, category != "Do_Nothing")$category,
+        colors = raster_attributes$colour,
+        values = raster_attributes$category,
         title = glue(
           "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
         ),
-        labels = filter(raster_attributes, category != "Do_Nothing")$label
+        labels = raster_attributes$label
       )
   }
   
   # Heat maps ####
-  if (terra::minmax(elsa_hm)[2] == 0) { # For when an heatmap only has one input layer?
+  if (terra::minmax(elsa_hm)[2] == 0) {
+    # For when an heatmap only has one input layer?
     map <- map |>
-      addRasterImage(elsa_hm,
-                     colors = pal.hm[1],
-                     opacity = 0.8,
-                     group = "ELSA HM",
-                     options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
-                     ) |>
+      addRasterImage(
+        elsa_hm,
+        colors = pal.hm[1],
+        opacity = 0.8,
+        group = "ELSA HM",
+        options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
+      ) |>
       addLegend(
         "topright",
         pal = colorNumeric(pal.hm[1], na.color = NA, domain = NULL),
@@ -82,12 +90,13 @@ fun_leaflet_elsa_1 <- function(multi_theme = NULL,
       )
   } else {
     map <- map |>
-      addRasterImage(elsa_hm,
-                     colors = pal.hm,
-                     opacity = 0.8,
-                     group = "ELSA HM",
-                     options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
-                     ) |>
+      addRasterImage(
+        elsa_hm,
+        colors = pal.hm,
+        opacity = 0.8,
+        group = "ELSA HM",
+        options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
+      ) |>
       addLegend(
         "topright",
         pal = colorNumeric(pal.hm, na.color = NA, domain = NULL),
@@ -102,30 +111,32 @@ fun_leaflet_elsa_1 <- function(multi_theme = NULL,
     name <- glue("{theme_tbl$theme[ii]} HM")
     if (terra::minmax(heatm_lst[[ii]])[2] == 0) {
       map <- map |>
-        addRasterImage(heatm_lst[[ii]],
-                       colors = pal.hm[1],
-                       opacity = 0.8,
-                       group = name,
-                       options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
-                       ) |>
+        addRasterImage(
+          heatm_lst[[ii]],
+          colors = pal.hm[1],
+          opacity = 0.8,
+          group = name,
+          options = tileOptions(zIndex = 1000)  # Ensure raster is always on top
+        ) |>
         addLegend(
           "topright",
-          pal = colorNumeric(pal.hm[1], domain = NULL),
+          pal = colorNumeric(pal.hm[1], na.color = NA, domain = NULL),
           values = terra::values(heatm[[ii]]),
           title = name,
           group = name
         )
     } else {
       map <- map |>
-        addRasterImage(heatm_lst[[ii]],
-                       colors = pal.hm,
-                       opacity = 0.8,
-                       group = name,
-                       options = tileOptions(zIndex = 1000)
-                       ) |>
+        addRasterImage(
+          heatm_lst[[ii]],
+          colors = pal.hm,
+          opacity = 0.8,
+          group = name,
+          options = tileOptions(zIndex = 1000)
+        ) |>
         addLegend(
           "topright",
-          pal = colorNumeric(pal.hm, domain = NULL),
+          pal = colorNumeric(pal.hm, na.color = NA, domain = NULL),
           values = terra::values(heatm_lst[[ii]]),
           title = name,
           group = name
@@ -140,7 +151,7 @@ fun_leaflet_elsa_1 <- function(multi_theme = NULL,
       colors = "#005a32",
       opacity = 0.8,
       group = ELSA_text |> filter(var == "protected_areas") |> pull(language),
-      options = tileOptions(zIndex = 800)
+      options = tileOptions(zIndex = 1000)
     ) |>
     addLegend(
       "topright",
@@ -173,7 +184,9 @@ fun_leaflet_elsa_1 <- function(multi_theme = NULL,
       glue(
         "ELSA {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
       ),
-      glue("ELSA {theme_tbl$theme}"),
+      glue(
+        "{theme_tbl$theme} {ELSA_text |> dplyr::filter(var == 'action') |> dplyr::pull(language)}"
+      ),
       "ELSA HM",
       glue("{theme_tbl$theme} HM"),
       ELSA_text |> filter(var == "protected_areas") |> pull(language)
