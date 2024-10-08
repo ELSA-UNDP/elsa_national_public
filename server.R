@@ -95,7 +95,7 @@ server <- function(input, output, session) {
     list(wgts = df1, impacts = df3)
   })
 
-#### Edit Weights ####
+  ## Edit Weights ####
   output$hot_wgt <- renderRHandsontable({
     if (!is.null(input$hot_wgt)) {
       DF <- hot_to_r(input$hot_wgt)
@@ -293,7 +293,33 @@ server <- function(input, output, session) {
             ),
             value = round((1 + ii) / (2 + nrow(theme_tbl)), 1)
           )
+<<<<<<<
     
+=======
+          
+          # test1 <- rep(1, 29)
+          # test1[names(feat_stack) %nin% theme_tbl$names[[ii]]] <- 0
+          # 
+          # zns_test <- prioritizr::zones(
+          #   "Protect" = zns[[1]]* test1,
+          #   "Restore" = zns[[2]]* test1,
+          #   "Manage" = zns[[3]]* test1,
+          #   feature_names = names(zns[[1]])
+          # )
+          # 
+          # prob.ta <- prioritizr::problem(pu_temp, zns_test, run_checks = FALSE) %>%
+          #   prioritizr::add_gurobi_solver(gap = 0.05, threads = 8)         
+          # 
+          # target <- get_min_lockin_target(c(PA0, PA0, PA0), input, pu)
+          # 
+          # prob.ta <- prob.ta %>%
+          #   prioritizr::add_max_utility_objective(c(
+          #     count_tar(pu0, target[1]),
+          #     count_tar(pu0, target[2]),
+          #     count_tar(pu0, target[3])
+          #   ))
+          
+>>>>>>>
           wgt.tmp <- weights.temp
           
           wgt.tmp$weight[names(feat_stack) %nin% theme_tbl$names[[ii]]] <- 0
@@ -373,43 +399,13 @@ server <- function(input, output, session) {
           dplyr::rowwise() |> 
           dplyr::mutate(elsa_tradeoff = round(ELSA / max(c_across(4:6)) * 100, 0)) |> 
           dplyr::rename(
-            "{ELSA_text |>  filter(var == 'elsa_tradeoff') |>  pull(language)}" := elsa_tradeoff
+            "{ELSA_text %>% filter(var == 'elsa_tradeoff') %>% pull(language)}" := elsa_tradeoff
           )
-
-
-        # feat_rep_tabl <-
-        #   feat_rep[feat_rep$zone == "Protect", c("feature")] %>%
-        #   dplyr::left_join(rh_rep, by = "feature")
-
-        # for (ii in 1:nrow(theme_tbl)) {
-        #   rh.lst[[ii]] <- feat_rep.lst[[ii]] %>%
-        #     dplyr::group_by(feature) %>%
-        #     dplyr::summarise(
-        #       !!stringr::str_glue(
-        #         theme_tbl$theme[[ii]],
-        #         " {ELSA_text %>% filter(var == 'action') %>% pull(language)}"
-        #       ) := round(sum(relative_held, na.rm = T) * 100, 0)
-        #     )
-        #   feat_rep_tabl <- feat_rep_tabl %>%
-        #     dplyr::left_join(rh.lst[[ii]], by = "feature")
-        # }
-
-        # feat_rep_tabl <- feat_rep_tabl %>%
-        #   dplyr::rowwise() %>%
-        #   dplyr::mutate(elsa_tradeoff = round(ELSA / max(c_across(3:5)) * 100, 0)) %>% # ELSA Trade-off relative to other scenarios
-        #   # tibble::add_column(
-        #   #   Name = feat_df$label,
-        #   #   Theme = feat_df$theme,
-        #   #   .before = 1
-        #   # ) %>%
-        #   dplyr::rename(
-        #     "{ELSA_text %>% filter(var == 'elsa_tradeoff') %>% pull(language)}" := elsa_tradeoff
-        #  )
-      } else { # don't we need this anyway if we want to show ELSA without multipri as well?
-        feature_rep_tabl <- feat_rep |> 
-          dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) |> 
-          # dplyr::rename_with(~ as_tibble(cats(elsa_raster)[[1]])$label, .cols = -c(1:3)) |> 
-          dplyr::select(3:6) |> 
+      } else { 
+        feature_rep_tabl <- feat_rep %>%
+          dplyr::mutate(dplyr::across(where(is.numeric), ~ round(. * 100, 1))) %>%
+          # dplyr::rename_with(~ as_tibble(cats(elsa_raster)[[1]])$label, .cols = -c(1:3)) %>%
+          dplyr::select(3:6) %>%
           tibble::add_column(
             Name = feat_df$label,
             Theme = feat_df$theme,
@@ -422,8 +418,12 @@ server <- function(input, output, session) {
           )
 
       }
+<<<<<<<
 
 
+=======
+
+>>>>>>>
       rlist <- list(
         elsa_raster = elsa_raster,
         #feature_rep_tabl = feature_rep_tabl
@@ -583,16 +583,16 @@ server <- function(input, output, session) {
       #### Delete geotiffs before prepping new tifs ####
       list.files(pattern = "*\\.(tif|xml)$") %>%
         file.remove()
-      
+
       files <- NULL
-      
+
       progress <- Progress$new(session)
       progress$set(
         message = ELSA_text |> dplyr::filter(var == "prep_raster") |> dplyr::pull(language),
         detail = ELSA_text |> dplyr::filter(var == "be_patient") |> dplyr::pull(language),
         value = 0.5
       )
-      
+
       weights.temp <- calc()$wgts
       
       if (!input$protected) {
@@ -642,16 +642,16 @@ server <- function(input, output, session) {
       #### Heatmaps ####
       elsa_hm <-
         terra::app(feat_stack * weights.temp$weight, sum, na.rm = TRUE)
-      
+
       elsa_hm <-
         terra::ifel(
           max(elsa_hm) > 0,
           elsa_hm / terra::global(elsa_hm, max, na.rm = TRUE)$max * pu,
           elsa_hm
         )
-      
+
       names(elsa_hm) <- "ELSA heatmap"
-      
+
       elsa_hm %>%
         terra::classify(cbind(NA, -9999)) %>%
         terra::writeRaster(
@@ -668,7 +668,7 @@ server <- function(input, output, session) {
         )
       
       theme_hm <- list()
-      
+
       for (ii in 1:nrow(theme_tbl))
       {
         if (terra::nlyr(theme_tbl$layers[[ii]]) > 1) {
@@ -678,17 +678,17 @@ server <- function(input, output, session) {
           theme_hm[[ii]] <-
             theme_tbl$layers[[ii]] * weights.temp$weight[weights.temp$feature %in% theme_tbl$names[[ii]]]
         }
-        
+
         theme_hm[[ii]] <-
           terra::ifel(
             max(theme_hm[[ii]]) > 0,
             theme_hm[[ii]] / terra::global(theme_hm[[ii]], max, na.rm = TRUE)$max * pu,
             theme_hm[[ii]]
           )
-        
+
         names(theme_hm[[ii]]) <-
           glue::glue("{theme_tbl$theme[ii]} heatmap")
-        
+
         theme_hm[[ii]] %>%
           terra::classify(cbind(NA, -9999)) %>%
           terra::writeRaster(
@@ -708,11 +708,11 @@ server <- function(input, output, session) {
       files <- list.files(pattern = "*\\.(tif|xml)$")
       
       files <- files[!grepl("spat", files)]
-      
+
       progress$set(value = 1)
-      
+
       progress$close()
-      
+
       # Create the zip file ####
       zip::zip(file, files)
     }
@@ -726,7 +726,7 @@ server <- function(input, output, session) {
       writexl::write_xlsx(my.data()$feature_rep_tabl, file)
     }
   )
-  
+
   output$download_params_csv <- downloadHandler(
     filename = function() {
       glue::glue("ELSA_model_parameters_{Sys.Date()}.csv")

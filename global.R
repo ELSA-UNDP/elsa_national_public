@@ -78,6 +78,7 @@ zns <- prioritizr::zones(
   feature_names = names(zn1)
 )
 
+
 PA <- terra::rast(PA)
 if (restorelock) {
   Rest <- terra::rast(Rest)
