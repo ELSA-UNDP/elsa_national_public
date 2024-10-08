@@ -52,7 +52,8 @@ RUN Rscript -e 'install.packages(c(\
   "zip",\
   "glue",\
   "DT",\
-  "argparser")\
+  "argparser",\
+  "highs")\
   )'
 
 # Install remote packages

@@ -11,62 +11,38 @@ restorelock <- restorelock
 `%nin%` <- Negate(`%in%`)
 
 if (restorelock & palock) {
-  prot_lst <- list("locked",
-                   "avail",
-                   "restore",
-                   "pa_restore")
+  prot_lst <- list("locked", "avail", "restore", "pa_restore")
   
   names(prot_lst) <- c(
-    ELSA_text %>%
-      filter(var == "prot_txt") %>%
-      pull(language),
-    ELSA_text %>%
-      filter(var == "nolock_txt") %>%
-      pull(language),
-    ELSA_text %>%
-      filter(var == "restlock_txt") %>%
-      pull(language),
-    ELSA_text %>%
-      filter(var == "prot_rest_txt") %>%
-      pull(language)
+    ELSA_text |> filter(var == "prot_txt") |> pull(language),
+    ELSA_text |> filter(var == "nolock_txt")  |> pull(language),
+    ELSA_text |> filter(var == "restlock_txt") |> pull(language),
+    ELSA_text |> filter(var == "prot_rest_txt") |> pull(language)
   )
 } else {
   if (restorelock) {
-    prot_lst <- list("locked",
-                     "avail",
-                     "restore")
+    prot_lst <- list("locked", "avail", "restore")
     
     names(prot_lst) <- c(
-      ELSA_text %>%
-        filter(var == "prot_txt") %>%
-        pull(language),
-      ELSA_text %>%
-        filter(var == "nolock_txt") %>%
-        pull(language),
-      ELSA_text %>%
-        filter(var == "restlock_txt") %>%
-        pull(language)
+      ELSA_text |> filter(var == "prot_txt") |> pull(language),
+      ELSA_text |> filter(var == "nolock_txt") |> pull(language),
+      ELSA_text |> filter(var == "restlock_txt") |> pull(language)
     )
   }
   else {
-    prot_lst <- list("locked",
-                     "avail")
+    prot_lst <- list("locked", "avail")
     
     names(prot_lst) <- c(
-      ELSA_text %>%
-        filter(var == "prot_txt") %>%
-        pull(language),
-      ELSA_text %>%
-        filter(var == "nolock_txt") %>%
-        pull(language)
+      ELSA_text |> filter(var == "prot_txt") |> pull(language),
+      ELSA_text |> filter(var == "nolock_txt") |> pull(language)
     )
   }
 }
 
 area_lst <- list("area")
 
-names(area_lst) <- ELSA_text %>%
-  dplyr::filter(var == "area") %>%
+names(area_lst) <- ELSA_text |>
+  dplyr::filter(var == "area")  |>
   dplyr::pull(language)
 
 #### Colour Palettes
@@ -128,11 +104,9 @@ if (restorelock & palock) {
   ))
 } else {
   if (!restorelock) {
-    pu_all <- list(area = list(locked = pu1_pa,
-                               avail = pu1))
+    pu_all <- list(area = list(locked = pu1_pa, avail = pu1))
   } else {
-    pu_all <- list(area = list(locked = pu1_pa,
-                               avail = pu1))
+    pu_all <- list(area = list(locked = pu1_pa, avail = pu1))
   }
 }
 
@@ -150,4 +124,4 @@ theme_tbl <- tibble(
   theme = themes,
   names = theme_names,
   layers = theme_layers
-)
+  )

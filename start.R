@@ -22,7 +22,8 @@ list.of.packages <- c(
   "tidyr",
   "zip",
   "DT",
-  "argparser"
+  "argparser",
+  "highs"
 )
 
 new.packages <-

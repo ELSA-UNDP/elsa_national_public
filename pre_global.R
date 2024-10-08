@@ -100,8 +100,8 @@ zones_df <- ELSA_df |>
     file_name
   )
 
-lockin_df <- ELSA_df %>%
-  dplyr::filter(ELSA_df$groups == "Lock-in") %>%
+lockin_df <- ELSA_df |> 
+  dplyr::filter(ELSA_df$groups == "Lock-in") |> 
   dplyr::select(
     name = if_else(language != "en", "label_name_translated", "label_name"),
     short = policy_short,
@@ -198,9 +198,7 @@ if (restorelock) {
 }
 if (restorelock & palock) {
   pu1_parest <-
-    c(zone_protect_PARest,
-      zone_restore_PARest,
-      zone_manage_PARest)
+    c(zone_protect_PARest, zone_restore_PARest, zone_manage_PARest)
   names(pu1_parest) <- c("protect", "restore", "manage")
 }
 
@@ -213,11 +211,9 @@ if (restorelock & palock) {
   ))
 } else {
   if (!restorelock) {
-    pu_all <- list(area = list(locked = pu1_pa,
-                               avail = pu1))
+    pu_all <- list(area = list(locked = pu1_pa, avail = pu1))
   } else {
-    pu_all <- list(area = list(locked = pu1_pa,
-                               avail = pu1))
+    pu_all <- list(area = list(locked = pu1_pa, avail = pu1))
   }
 }
 
@@ -254,15 +250,15 @@ zns <- prioritizr::zones(
 if (weight_cal) {
   pu_temp <- pu_all[["area"]][["locked"]]
   
-  prob.ta <- prioritizr::problem(pu_temp, zns) %>%
+  prob.ta <- prioritizr::problem(pu_temp, zns) |>
     prioritizr::add_max_utility_objective(c(
       count_tar(pu0, protect_budget),
       count_tar(pu0, restore_budget),
       count_tar(pu0, manage_budget)
-    )) %>%
+    )) |>
     prioritizr::add_gurobi_solver(gap = 0.05, threads = 8) # 16 Available on Gurobi Cloud
   
-  prob.ta <- prob.ta %>%
+  prob.ta <- prob.ta |>
     prioritizr::add_locked_in_constraints(c(PA, PA0, PA0))
   
   s.ta <- solve(prob.ta, force = TRUE)
@@ -270,12 +266,10 @@ if (weight_cal) {
   freq <-
     prioritizr::eval_feature_representation_summary(prob.ta, s.ta)
   
-  rep <- rep0 <- tidyr::pivot_wider(
-    freq,
-    id_cols = feature,
-    names_from = summary,
-    values_from = relative_held
-  ) %>%
+  rep <- rep0 <- tidyr::pivot_wider(freq,
+                                    id_cols = feature,
+                                    names_from = summary,
+                                    values_from = relative_held) |>
     dplyr::select(-c(overall))
   
   rep[, -1] <- 0
@@ -285,10 +279,10 @@ if (weight_cal) {
   
   for (ii in 1:terra::nlyr(feat_stack)) {
     wgt2 <- wgt
-
+    
     wgt2[ii, ] <- 1
-
-    prob.all <- prob.ta %>%
+    
+    prob.all <- prob.ta |>
       prioritizr::add_feature_weights(wgt2)
     
     result <- solve(prob.all, force = TRUE)
@@ -301,24 +295,24 @@ if (weight_cal) {
       id_cols = feature,
       names_from = summary,
       values_from = relative_held
-    ) %>%
+    ) |>
       dplyr::select(-c(overall))
-
+    
     rep[ii, ] <- tar[ii, ]
-
+    
     rm(prob.all, result, feat_rep, tar)
     gc()
   }
   
   rep[is.na(rep)] <- 0
-
+  
   gc()
   
   # all groups
   wgt <-
     as.matrix(matrix(rep(1, 3), ncol = 3, nrow = terra::nlyr(feat_stack)))
   
-  prob.all <- prob.ta %>%
+  prob.all <- prob.ta |>
     prioritizr::add_feature_weights(wgt)
   
   result <- solve(prob.all, force = TRUE)
@@ -331,7 +325,7 @@ if (weight_cal) {
     id_cols = feature,
     names_from = summary,
     values_from = relative_held
-  ) %>%
+  ) |>
     dplyr::select(-c(overall))
   
   tar[is.na(tar)] <- 0
@@ -340,7 +334,7 @@ if (weight_cal) {
     feature = rep$feature,
     max_representation = rowSums(rep[, -1], na.rm = T),
     max_utility = rowSums(tar[, -1], na.rm = T)
-  ) %>%
+  ) |>
     dplyr::mutate(
       delta_mu = max_utility - max_representation,
       delta_mu_perc = (max_utility - max_representation) / max_representation * 100
@@ -358,11 +352,11 @@ if (weight_cal) {
     adj <-
       wgt_scale - (dd$delta_mu_perc - min(dd$delta_mu_perc)) / (max(dd$delta_mu_perc) - min(dd$delta_mu_perc)) * wgt_scale
     wgtb <- wgta + adj
-
+    
     print(it)
     flush.console()
-
-    p1 <- prob.ta %>%
+    
+    p1 <- prob.ta |>
       prioritizr::add_feature_weights(wgtb)
     
     s1 <- solve(p1, force = TRUE)
@@ -370,12 +364,10 @@ if (weight_cal) {
     
     f1 <- prioritizr::eval_feature_representation_summary(p1, s1)
     
-    t1 <- tidyr::pivot_wider(
-      f1,
-      id_cols = feature,
-      names_from = summary,
-      values_from = relative_held
-    ) %>%
+    t1 <- tidyr::pivot_wider(f1,
+                             id_cols = feature,
+                             names_from = summary,
+                             values_from = relative_held) |>
       dplyr::select(-c(overall))
     
     t1[is.na(t1)] <- 0
@@ -384,14 +376,14 @@ if (weight_cal) {
       feature = rep$feature,
       max_representation = rowSums(rep[, -1], na.rm = T),
       max_utility = rowSums(t1[, -1], na.rm = T)
-    ) %>%
+    ) |>
       mutate(
         delta_mu = max_utility - max_representation,
         delta_mu_perc = (max_utility - max_representation) / max_representation * 100
       )
     
     dd1
-
+    
     summary(dd1$delta_mu_perc)
     
     tt <- tibble::tibble(
@@ -430,7 +422,7 @@ if (weight_cal) {
     ELSA_text
   )
   
-  wgta[, 1] %>% readr::write_rds(glue::glue("wgta_{tolower(iso3)}.rds"), compress = "gz")
+  wgta[, 1] |>  readr::write_rds(glue::glue("wgta_{tolower(iso3)}.rds"), compress = "gz")
 } else {
   wgta <- as.numeric(feat_df$weight_calibration)
 }
@@ -441,11 +433,9 @@ wgts <- tibble::tibble(
   name = feat_df$label,
   theme = feat_df$theme,
   feature = names(feat_stack),
-  weight = ifelse(
-    is.na(feat_df$weight_final),
-    5,
-    as.numeric(feat_df$weight_final)
-  ),
+  weight = ifelse(is.na(feat_df$weight_final),
+                  5,
+                  as.numeric(feat_df$weight_final)),
   policy = feat_df$policy_num
 ) # Policy Targets
 
@@ -463,17 +453,16 @@ for (ii in 1:length(themes)) {
   theme_layers[[ii]] <- feat_stack[[theme_names[[ii]]]]
 }
 
-theme_tbl <- tibble(
-  theme = themes,
-  names = theme_names,
-  layers = theme_layers
-)
+theme_tbl <- tibble(theme = themes,
+                    names = theme_names,
+                    layers = theme_layers)
+
 gc()
 
 # Get minimum budget values per each lock-in scenario
 default_protect_min_budget <- round(get_coverage(PA, pu), 2)
 if (restorelock) {
-default_restore_min_budget <- round(get_coverage(Rest, pu), 2)
+  default_restore_min_budget <- round(get_coverage(Rest, pu), 2)
 } else {
   default_restore_min_budget <- 0
 }
