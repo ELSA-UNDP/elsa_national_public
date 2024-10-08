@@ -332,8 +332,7 @@ server <- function(input, output, session) {
       )
 
       if (input$multipri == TRUE) {
-        # rh.lst <- list()
-        browser()
+        
         feature_rep_tabl_comb <- purrr::reduce(seq_along(feat_rep.lst), function(x, i) {
           df <- feat_rep.lst[[i]][, c(1, 2)]
           colnames(df)[2] <- themes[[i]]
