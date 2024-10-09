@@ -1,3 +1,11 @@
+#' Function to create an interactive map without an elsa prioritisation
+#'
+#' @param elsa_hm A `SpatRaster` A list of `SpatRaster` that contains information of the normalised summed input feature data (all features) for the country, indicating the relative contribution of every planning unit to the maximum possible net benefit in the country.
+#' @param heatm_lst A list of `SpatRaster` that contains information of the normalised summed input feature data (all features) PER THEME for the country, indicating the relative contribution of every planning unit to the maximum possible net benefit in the country.
+#' @param theme_tbl A `tbl_df` containing information on the themes, the names of the data in each theme, and the type of data layers
+#'
+#' @return A `leaflet` map 
+#' @export
 fun_leaflet_elsa_0 <- function(elsa_hm = NULL,
                                heatm_lst = NULL,
                                theme_tbl = NULL) {

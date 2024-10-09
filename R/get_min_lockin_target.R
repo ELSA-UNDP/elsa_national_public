@@ -1,3 +1,12 @@
+#' A function to get the minimum budget needed with areas locked-in
+#'
+#' @param lockin A `SpatRaster` or stack of `SpatRaster` with the lock-in areas for a prioritization
+#' @param input The input object from the Shiny application that inlcudes the user set budgets
+#' @param pu A planning unit `SpatRaster`
+#'
+#' @return A list of minimum budgets for the prioritization
+#' @export
+#'
 get_min_lockin_target <- function(lockin, input, pu) {
   min_coverage <- get_coverage(lockin, pu)
 

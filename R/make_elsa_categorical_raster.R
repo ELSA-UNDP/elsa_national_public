@@ -1,3 +1,9 @@
+#' Function to create a categorical raster based on an input raster
+#'
+#' @param in_rast A `SpatRaster` that is to be divided into categories
+#'
+#' @return A `SpatRaster` with categorical data
+#' @export
 make_elsa_categorical_raster <- function(in_rast) {
   # Create a tibble with the categories
   elsa_categories <- tibble(

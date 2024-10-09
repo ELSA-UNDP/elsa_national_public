@@ -1,3 +1,8 @@
+#' Function to create basic leaflet map
+#'
+#' @return `leaflet` map that is used as baseline for other maps
+#' @export 
+#'
 get_leaflet_basemap <- function() {
   # Create an empty leaflet map with baselayers
   map <- leaflet() %>%

@@ -1,3 +1,10 @@
+#' Function to create leaflet map based on the input data
+#'
+#' @param layers A `SpatRaster` stack with the input data for the prioritisation
+#' @param labels A vector containing the names of the layers in the `SpatRaster` stack.
+#'
+#' @return A `leaflet` map of the input data
+#' @export
 fun_leaflet_input <- function(layers, labels) {
   # Create default leaflet basemap ####
   map <- get_leaflet_basemap()

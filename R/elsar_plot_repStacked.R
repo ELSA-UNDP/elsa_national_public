@@ -1,3 +1,10 @@
+#' Function to create a bar plot of the representation of three zones
+#'
+#' @param feature_rep_tabl A dataframe that contains the representation information for each zone ("Protect", "Restore", "Manage"). 
+#' @param input The input objects of an R Shiny App. Needs to contain information on the zone budgets.
+#'
+#' @return A `ggplot`objects with the representation 
+#' @export
 elsar_plot_repStacked <- function(feature_rep_tabl, input) {
   data_long <- feature_rep_tabl %>%
     tidyr::pivot_longer(

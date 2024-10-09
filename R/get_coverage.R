@@ -1,15 +1,10 @@
-#' Calculate country area coverage
+#' Function to calculate country area coverage. Can be used to get the minimum budget for a specific zone.
 #'
-#' @inheritParams spatRast
-#' @inheritParams spatRast
+#' @param zone_layer A `SpatRaster` that contains information of the planning units covering an area.
+#' @param pu_layer A `SpatRaster` with the total number of planning units in an area.
+#'
 #' @return A vector of areal targets of length 1.
-#'
-#' @seealso [terra::global()] which this function wraps.
 #' @export
-#' @examples
-#' get_coverage(PA, pu)
-#' get_coverage(zone_protect, pu)
-#' get_coverage(zone_manage, pu)
 get_coverage <- function(zone_layer, pu_layer) {
   terra::global(zone_layer, sum, na.rm = TRUE)$sum / terra::global(pu_layer, sum, na.rm = TRUE)$sum * 100
 }
