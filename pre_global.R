@@ -293,11 +293,27 @@ zns <- prioritizr::zones(
 # The maximum utility objective function does not have targets for features, but
 # features can be given weights based on their perceived importance.
 # In the ELSA pipeline, weights are determined in stakeholder workshops, but initial
-# weights are calculated based on the analysis below.
+# weights are calculated based on the analysis below. Pre-calibration aims to ensure
+# that all conservation features achieve a similar level of representation relative
+# to their maximum possible representation within the constraints of the budgets.
 ################################################################################
 if (weight_cal) {
-  # Planning unit information with cost information per zone (area based, so 1 where selection is possible for a zone, 0 where selection isnt possible)
+  # Planning unit information with cost information per zone (area based, so 1 where selection is possible for a zone, 0 where selection isn't possible)
   pu_temp <- pu_all[["area"]][["locked"]]
+  
+  # Create data frame for representation calculations ####
+  # Calculate the sum of each layer
+  layer_sums <- terra::global(feat_stack, sum, na.rm = TRUE)
+  # Extract the names of each layer
+  layer_names <- terra::names(feat_stack)
+  
+  # Create a data frame with layer names and their corresponding sums
+  overall_raw_df <- data.frame(
+    feature = layer_names,
+    total_amount = layer_sums[, 1] # First column of the global output
+  )
+  
+  rm(layer_sums, layer_names)
 
   # Initial prioritizr problem formulation
   prob.ta <- prioritizr::problem(pu_temp, zns) %>%
@@ -306,161 +322,115 @@ if (weight_cal) {
       count_tar(pu0, restore_budget),
       count_tar(pu0, manage_budget)
     )) %>%
-    prioritizr::add_gurobi_solver(gap = 0.05, threads = 8) %>% # 16 Available on Gurobi Cloud
+    prioritizr::add_default_solver(gap = 0.05, threads = 8) %>% # 16 Available on Gurobi Cloud
     prioritizr::add_locked_in_constraints(c(PA, PA0, PA0))
 
-  # Solve conservatioon problem
-  s.ta <- solve(prob.ta, force = TRUE)
+  # Solve conservation problem
+  s.ta <- solve.ConservationProblem(prob.ta, force = TRUE)
 
-  # Get feature representation
-  freq <-
-    prioritizr::eval_feature_representation_summary(prob.ta, s.ta)
+  freq <- prioritizr::eval_feature_representation_summary(prob.ta, s.ta)
+  
+  # Prepare weight matrix with zeros
+  wgt <- matrix(0, ncol = 3, nrow = terra::nlyr(feat_stack))
 
-
-  rep <- rep0 <- tidyr::pivot_wider(freq,
-    id_cols = feature,
-    names_from = summary,
-    values_from = relative_held
-  ) %>%
-    dplyr::select(-c(overall))
-
-  rep[, -1] <- 0
-
-
-  wgt <-
-    as.matrix(matrix(
-      rep(0, 3),
-      ncol = 3,
-      nrow = terra::nlyr(feat_stack)
-    ))
-
-
+  # Initialize data frame to store maximum representations
+  rep_max <- tibble(feature = names(feat_stack), max_representation = 0)
+  
   for (ii in 1:terra::nlyr(feat_stack)) {
     wgt2 <- wgt
-
-    wgt2[ii, ] <- 1
-
-    prob.all <- prob.ta %>%
+    wgt2[ii, ] <- 1  # Set weight for the current feature
+    
+    prob_all <- prob.ta %>%
       prioritizr::add_feature_weights(wgt2)
-
-    result <- solve(prob.all, force = TRUE)
-
-    feat_rep <-
-      prioritizr::eval_feature_representation_summary(prob.all, result)
-
-    tar <- tidyr::pivot_wider(
-      feat_rep,
-      id_cols = feature,
-      names_from = summary,
-      values_from = relative_held
-    ) %>%
-      dplyr::select(-c(overall))
-
-    rep[ii, ] <- tar[ii, ]
-
-    rm(prob.all, result, feat_rep, tar)
+    
+    result <- solve(prob_all, force = TRUE)
+    
+    # Calculate representation using your new method
+    overall_rep <- prioritizr::eval_feature_representation_summary(prob_all, result) %>%
+      dplyr::rename(zone = summary) %>%
+      filter(zone == "overall") %>%
+      dplyr::select("feature", "absolute_held") %>%
+      dplyr::left_join(overall_raw_df, by = "feature") %>%
+      dplyr::mutate(relative_held_overall = absolute_held / total_amount)
+    
+    # Store the maximum representation for the current feature
+    rep_max$max_representation[ii] <- overall_rep$relative_held_overall[ii]
+    
+    rm(prob_all, result, overall_rep)
     gc()
   }
 
-  rep[is.na(rep)] <- 0
-
   gc()
 
-  # all groups
+  # All features weighted equally
+  wgt_equal <- matrix(1, ncol = 3, nrow = terra::nlyr(feat_stack))
 
-  wgt <-
-    as.matrix(matrix(
-      rep(1, 3),
-      ncol = 3,
-      nrow = terra::nlyr(feat_stack)
-    ))
+  prob_all_equal <- prob.ta %>%
+    prioritizr::add_feature_weights(wgt_equal)
+  
+  result_equal <- solve.ConservationProblem(prob_all_equal, force = TRUE)
 
-
-  prob.all <- prob.ta %>%
-    prioritizr::add_feature_weights(wgt)
-
-  result <- solve(prob.all, force = TRUE)
-
-  feat_rep <-
-    prioritizr::eval_feature_representation_summary(prob.all, result)
-
-  tar <- tidyr::pivot_wider(
-    feat_rep,
-    id_cols = feature,
-    names_from = summary,
-    values_from = relative_held
-  ) %>%
-    dplyr::select(-c(overall))
-
-  tar[is.na(tar)] <- 0
-
-  dd <- tibble::tibble(
-    feature = rep$feature,
-    max_representation = rowSums(rep[, -1], na.rm = T),
-    max_utility = rowSums(tar[, -1], na.rm = T)
+  overall_rep_equal <- prioritizr::eval_feature_representation_summary(prob_all_equal, result_equal) %>%
+    dplyr::rename(zone = summary) %>%
+    filter(zone == "overall") %>%
+    dplyr::select("feature", "absolute_held") %>%
+    dplyr::left_join(overall_raw_df, by = "feature") %>%
+    dplyr::mutate(relative_held_overall = absolute_held / total_amount)
+  
+  # Combine into a data frame
+  dd <- data.frame(
+    feature = overall_rep_equal$feature,
+    max_representation = rep_max$max_representation,
+    max_utility = overall_rep_equal$relative_held_overall
   ) %>%
     dplyr::mutate(
       delta_mu = max_utility - max_representation,
       delta_mu_perc = (max_utility - max_representation) / max_representation * 100
     )
-
+  
   summary(dd$delta_mu_perc)
 
   # calculate addition
   calib <- TRUE
   wgt_scale <- 2
   it <- 1
-  wgta <- wgt
+  wgta <- wgt_equal  # Start with equal weights
 
-  while (calib) {
-    adj <-
-      wgt_scale - (dd$delta_mu_perc - min(dd$delta_mu_perc)) / (max(dd$delta_mu_perc) - min(dd$delta_mu_perc)) * wgt_scale
+  while (calib) while (calib) {
+    adj <- wgt_scale - (dd$delta_mu_perc - min(dd$delta_mu_perc)) / (max(dd$delta_mu_perc) - min(dd$delta_mu_perc)) * wgt_scale
     wgtb <- wgta + adj
-
+    
     print(it)
     flush.console()
-
+    
     p1 <- prob.ta %>%
       prioritizr::add_feature_weights(wgtb)
-
-    s1 <- solve(p1, force = TRUE)
-
-
-    f1 <- prioritizr::eval_feature_representation_summary(p1, s1)
-
-    t1 <- tidyr::pivot_wider(
-      f1,
-      id_cols = feature,
-      names_from = summary,
-      values_from = relative_held
+    
+    s1 <- solve.ConservationProblem(p1, force = TRUE)
+    
+    # Calculate representation using your new method
+    overall_rep_iter <- prioritizr::eval_feature_representation_summary(p1, s1) %>%
+      dplyr::rename(zone = summary) %>%
+      filter(zone == "overall") %>%
+      dplyr::select("feature", "absolute_held") %>%
+      dplyr::left_join(overall_raw_df, by = "feature") %>%
+      dplyr::mutate(relative_held_overall = absolute_held / total_amount)
+    
+    # Create dd1 data frame with updated representations
+    dd1 <- data.frame(
+      feature = overall_rep_iter$feature,
+      max_representation = rep_max$max_representation,
+      max_utility = overall_rep_iter$relative_held_overall
     ) %>%
-      dplyr::select(-c(overall))
-
-    t1[is.na(t1)] <- 0
-
-    dd1 <- tibble::tibble(
-      feature = rep$feature,
-      max_representation = rowSums(rep[, -1], na.rm = T),
-      max_utility = rowSums(t1[, -1], na.rm = T)
-    ) %>%
-      mutate(
+      dplyr::mutate(
         delta_mu = max_utility - max_representation,
         delta_mu_perc = (max_utility - max_representation) / max_representation * 100
       )
-
-    dd1
-
-    summary(dd1$delta_mu_perc)
-
-    tt <- tibble::tibble(
-      old = dd$delta_mu_perc,
-      new = dd1$delta_mu_perc,
-      delta = new - old
-    )
-
+    
+    # Check if the spread of delta_mu_perc has decreased
     delta1 <- max(dd1$delta_mu_perc) - min(dd1$delta_mu_perc)
     delta0 <- max(dd$delta_mu_perc) - min(dd$delta_mu_perc)
-
+    
     if (delta1 < delta0) {
       wgta <- wgtb
       dd <- dd1
@@ -469,21 +439,17 @@ if (weight_cal) {
       calib <- FALSE
     }
   }
-
+  
   rm(
     pu_temp,
     prob.ta,
-    result,
+    result_equal,
     freq,
-    rep,
-    prob.all,
-    result,
-    feat_rep,
-    tar,
+    prob_all_equal,
+    overall_rep_equal,
+    overall_rep_iter,
     p1,
     s1,
-    f1,
-    t1,
     dd1,
     ELSA_text
   )
@@ -492,8 +458,6 @@ if (weight_cal) {
 } else {
   wgta <- as.numeric(feat_df$weight_calibration)
 }
-
-wgta <- as.numeric(feat_df$weight_calibration)
 
 wgts <- tibble::tibble(
   name = feat_df$label,
